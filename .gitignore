@@ -26,8 +26,9 @@ env/
 venv/
 ENV/
 
-# Testing & Coverage
+# Testing, Linting & Coverage
 .pytest_cache/
+.ruff_cache/
 .coverage
 htmlcov/
 
