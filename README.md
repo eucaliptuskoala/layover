@@ -10,6 +10,7 @@
 When building distributed systems, partial failures are inevitable: network timeouts, process crashes, and unhandled exceptions can strike mid-transaction. Without proper coordination, systems are left in an inconsistent "zombie" state (for instance, a flight seat and hotel room are reserved, but payment fails and holds are never released).
 
 **Layover** is a study comparing two approaches to multi-service workflows:
+
 1. **Naive Baseline:** Direct sequential HTTP calls (`Flight -> Hotel -> Payment`) with simple in-process error handling.
 2. **Durable Workflow (Temporal):** Orchestrated execution implementing the **Saga pattern** with automated retry and compensating rollbacks.
 
@@ -21,7 +22,7 @@ Full personal development plan, learning outcomes, and research cycle details ca
 
 The project consists of three independent microservices following the **database-per-service** pattern, a coordinator layer, and a control UI:
 
-```
+```text
                   +-----------------------------------+
                   |      React Frontend (Vite)        |
                   |  - Booking Form                   |
@@ -107,7 +108,7 @@ This starts a lightweight, single-binary Temporal cluster and launches the Web U
 
 ## Project Structure
 
-```
+```text
 layover/
 ├── pdp.md             # Personal Development Plan (Cycles, Goals, LOs)
 ├── pyproject.toml     # Project dependencies and config managed by uv
