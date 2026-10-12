@@ -91,32 +91,31 @@ I work in 5 clear, bite-sized iterations. At the end of each sprint, I review pr
 
 ## How are you going to do it?
 
-I will execute the project across 5 structured cycles, totaling approximately 38 hours:
+I will execute the project across 5 structured cycles:
 
-| Cycle | Focus & Method | Deliverable | Est. Hours |
-| :--- | :--- | :--- | :--- |
-| **Cycle 1: Research & Problem Scoping** | **Library:** Research Saga pattern, 2PC, ACID vs. BASE, and Temporal architecture. Define failure test scenarios. | A short research summary defining the failure matrix, hypotheses, and quality metrics. | ~6 hours |
-| **Cycle 2: Microservices & Naive Baseline** | **Workshop & Lab:** Build the 3 services in Python (FastAPI) with SQLite DBs, write unit tests with pytest, and implement the naive coordinator. | Working FastAPI microservices with pytest unit tests, independent SQLite DBs, and naive coordinator. | ~8 hours |
-| **Cycle 3: React UI Dashboard & Baseline Crash Testing** | **Lab:** Build the 1-page React (Vite) UI dashboard with a crash trigger. Run crash tests and record orphaned database holds. | React UI dashboard + test report showing the failure modes of the naive implementation. | ~8 hours |
-| **Cycle 4: Temporal Workflow & Compensation** | **Workshop & Lab:** Run local Temporal server, implement the booking saga with compensating rollbacks using temporalio, and write pytest tests. | Fully working Temporal saga in Python that automatically recovers and compensates after failures. | ~10 hours |
-| **Cycle 5: Comparison & Advisory Report** | **Lab & Advice:** Run identical crash tests on Temporal. Compare metrics, capture UI/flow screenshots, and write the final advice report. | Final comparison report (ADR), portfolio documentation, and review with coach. | ~6 hours |
-| **Total** | | | **~38 hours** |
+| Cycle | Focus & Method | Deliverable |
+| :--- | :--- | :--- |
+| **Cycle 1: Research & Problem Scoping** | **Library:** Research Saga pattern, 2PC, ACID vs. BASE, and Temporal architecture. Define failure test scenarios. | A short research summary defining the failure matrix, hypotheses, and quality metrics. |
+| **Cycle 2: Microservices & Contracts** | **Workshop & Lab:** Build the 3 services in Python (FastAPI) with SQLite DBs, write unit tests with pytest for forward and compensation endpoints. | Working FastAPI microservices with pytest unit tests and independent SQLite DBs. |
+| **Cycle 3: Temporal Workflow & Compensation** | **Workshop & Lab:** De-risk core technology early: start local Temporal server, implement the booking saga with compensating rollbacks using temporalio, and write pytest tests. | Fully working Temporal saga in Python that automatically recovers and compensates after failures. |
+| **Cycle 4: Naive Baseline & React UI Dashboard** | **Lab:** Build the naive sequential coordinator script and the 1-page React (Vite) UI dashboard with a crash trigger. Run baseline crash tests. | Naive coordinator, React UI dashboard, and baseline crash test report. |
+| **Cycle 5: Comparison & Advisory Report** | **Lab & Advice:** Run identical crash tests on Temporal. Compare metrics, capture UI/flow screenshots, and write the final advice report. | Final comparison report (ADR), portfolio documentation, and review with coach. |
 
 ### Cycle Details
 
-- **Cycle 1 — Research & Problem Scoping (~6h):**
+- **Cycle 1 — Research & Problem Scoping:**
   Study how partial failures break distributed workflows. Define the exact scenario to test (e.g. crash after flight reservation, crash during payment). Define the data consistency checklist to verify after each test run.
 
-- **Cycle 2 — Microservices & Naive Baseline (~8h):**
-  Create the Flight, Hotel, and Payment services using Python (FastAPI). Give each its own SQLite database file (`flight.db`, `hotel.db`, `payment.db`). Write unit tests with `pytest` to verify `/reserve` and `/cancel` endpoints. Connect them with a naive sequential controller.
+- **Cycle 2 — Microservices & Contracts:**
+  Create the Flight, Hotel, and Payment services using Python (FastAPI). Give each its own SQLite database file (`flight.db`, `hotel.db`, `payment.db`). Write unit tests with `pytest` to verify forward (`/reserve`, `/charge`) and compensating (`/cancel`, `/refund`) endpoints.
 
-- **Cycle 3 — React UI Dashboard & Baseline Crash Testing (~8h):**
-  Build a simple frontend in React (Vite) to run bookings and view service statuses. Add a button or toggle to trigger a simulated service crash mid-booking. Run the test, inspect the databases, and record the orphaned records.
+- **Cycle 3 — Temporal Workflow & Compensation:**
+  De-risk the core new technology early: start the local Temporal engine (`temporal server start-dev`). Re-implement the booking workflow as a Temporal Saga using the `temporalio` Python SDK, where each step has a compensating activity. Run integration tests in `pytest` to ensure rollbacks trigger correctly.
 
-- **Cycle 4 — Temporal Workflow & Compensation (~10h):**
-  Start the local Temporal engine (`temporal server start-dev`). Re-implement the booking workflow as a Temporal Saga using the `temporalio` Python SDK, where each step has a compensating activity. Run integration tests in `pytest` to ensure rollbacks trigger correctly.
+- **Cycle 4 — Naive Baseline & React UI Dashboard:**
+  Implement the naive sequential controller (straightforward HTTP calls with in-memory `try/except`) to serve as the baseline comparison. Build the simple frontend in React (Vite) to run bookings, view service statuses, and trigger simulated service crashes. Run the baseline crash test and record orphaned database holds.
 
-- **Cycle 5 — Comparison & Advisory Report (~6h):**
+- **Cycle 5 — Comparison & Advisory Report:**
   Run the crash test against the Temporal version. Document the difference in consistency (orphaned holds vs. clean cancellations) and inspect the runs in Temporal Web UI. Write the final ADR / advice report summarizing trade-offs and recommendations.
 
 ## What expertise do you need?
