@@ -1,0 +1,316 @@
+КОНТЕКСТ КУРСА ДЛЯ CHATGPT
+AV-CSS: структура, требования и темы
+Сжатая версия Canvas и стартовых сообщений semester team: без повторов и справочного шума.
+
+Инструкция для ChatGPT
+
+
+Начни отсюда: что делать сейчас
+
+
+
+Catch-up: Если есть пробелы в Agile, CI/CD, software quality, testing или full-stack development, определить их в week 1, потренироваться в маленьком personal project и обсудить setup с teacher.
+Расписание первой недели
+Monday 31 August: 09:00 — встреча студентов и teachers в Strijp TQ5.2; 10:00 — общий offline kick-off в Tribune De Visie, TQ5.2528; примерно 13:00–15:30 — знакомство с project stakeholders.
+Tuesday: Работа из дома; заранее договориться с группой и работать вместе online.
+Wednesday: Работа с командой на TQ утром; вторую половину дня можно продолжить online.
+Thursday 3 September: Первая demo delivery stakeholder. Встречу организует сама группа.
+Friday: Работа из дома и синхронизация с группой online.
+Обязательное присутствие: Стартовые дни проходят физически на площадке: формируются группы, назначаются coaches и начинаются встречи со stakeholder. Пропуск старта прямо назван semester team серьёзным риском.
+Коммуникация: При вопросах включать в переписку всех teachers, а не отвечать только автору welcome email. Teams и Canvas используются параллельно.
+Актуальное расписание: MyX roster
+Структура семестра
+
+
+Group Project: Команда из 3–6 студентов работает над authentic assignment внешнего stakeholder. Проект длится примерно 17 недель и идёт трёхнедельными sprints. Нужен не просто функциональный продукт, а valuable, maintainable и transferable solution с рабочими process, environment, quality criteria и tooling.
+Первые три sprints: Команда изучает core software-engineering concepts, переводит их в контекст проекта и решает, что внедрить, что проверить экспериментом, а по чему дать stakeholder advice. К концу Sprint 3 должна появиться основа и ясный план применения core skills.
+Sprint rhythm: Для каждого sprint фиксируются research, realisation и personal-experiment activities. В конце sprint группа показывает stakeholder и teacher team последние продукты и insights, собирает feedback и обновляет backlog.
+Personal Experiments: Нужно провести минимум два индивидуальных эксперимента в одном или нескольких небольших проектах. Рекомендуемый цикл: Knowledge → Prototype → Evaluate → Advice. Один эксперимент желательно ограничить максимум двумя sprints.
+Showcase: Каждый студент минимум один раз показывает setup, идеи и результаты одного Personal Experiment fellow students и teachers. В planning предусмотрено несколько showcase-моментов во второй половине семестра.
+Рабочий принцип: Все существенные решения нужно делать видимыми: связывать с learning outcome, объяснять trade-offs, сохранять feedback и показывать, как он изменил следующую версию работы.
+Learning outcomes: что нужно доказать
+Ниже — официальные формулировки пяти learning outcomes и компактная выжимка Clarifications Learning Outcomes из Canvas. Clarifications описывают признаки уровня Proficient, но не являются механическим checklist: каждый sprint нужно переоценивать gaps с peers и teachers, собирать feedback и планировать следующие activities.
+Software Engineering
+You apply an engineering approach in all your activities to create software systems in progressive steps, while applying system thinking during informed decision making.
+Engineering approach: Использовать measurable feedback cycles для validation и направления решений; применять engineering approach также для улучшения собственных software-engineering skills.
+Progressive steps: Показывать прогресс через небольшие evidence-based эксперименты, включая GenAI-assisted prototyping и validation, и решать по результатам, даёт ли идея ценность проекту.
+Systems thinking: Анализировать связи между components, processes, data и stakeholders: data flows, communication patterns, system boundaries и влияние data complexity на trade-offs.
+Informed decisions: Обосновывать design choices через business context, system landscape и requirements; среда и решение должны быть fit-for-purpose.
+Software Quality
+You demonstrate sustainable software quality in all your work, by systematically addressing both functional and non-functional requirements of a software system, and continuously validating system behavior against well-defined quality benchmarks.
+Sustainable quality: Использовать practices для long-term sustainability software, адаптироваться к новым industry practices (например AI-specific requirements и UX) и целенаправленно улучшать software change skills.
+Continuous validation: Измерять качества системы во времени в воспроизводимой среде, пригодной для диагностики и циклов улучшения.
+Well-defined quality: Переводить scalability, maintainability, performance, security и другие атрибуты, например из ISO/IEC 25010, в конкретные измеримые критерии и доказательства.
+Software Maintenance
+You apply, in various contexts, a maintainable software delivery process, which is compatible with the current stakeholder's IT organization, and continuously aim for improving the software development process itself by applying best practices.
+Maintainable delivery: Проектировать, использовать и улучшать environment/processes для continuous integration и automate-all; environment должен поддерживать team collaboration, а process — управлять system changes.
+Running system: Разворачивать software в рабочей среде и постоянно наблюдать желаемое поведение системы и интеграций.
+Infrastructure fit: Проверять non-functional requirements инфраструктуры, демонстрировать feasibility deployment в stakeholder organization и давать advice по потенциальным улучшениям stakeholder infrastructure.
+Process improvement: Применять командные best practices и показатели вроде DORA metrics для повышения скорости и надёжности delivery.
+Professional Standard
+You take responsibility when solving an ICT issue. You define and carry out your research using relevant selected methodologies, and provide advice to your stakeholders even in complex and uncertain contexts. You substantiate and validate future-oriented choices by use of ethical, intercultural, and sustainable arguments.
+Responsibility: Координировать задачи, быть прозрачным относительно последствий решения и обеспечивать качественный handover stakeholder.
+Applied research: Формулировать и приоритизировать subjects/questions, обосновывать research patterns, strategies и methods, показывать reliability, validity и relevance результатов и критически рефлексировать над research process.
+Complex context: Изучать domain и говорить на его языке со stakeholders; различать essential и accidental complexity и работать с essential complexity; следить за technology trends, contextualise их и meaningful way делиться знаниями.
+Law, ethics and sustainability: Соблюдать этические границы, учитывать GDPR и AI Act, проводить impact и stakeholder analysis, давать устойчивые рекомендации и работать в intercultural teams.
+Personal Leadership
+You independently formulate goals and actions that demonstrate leadership in your own long term development as an ICT professional. You show that you are capable of carrying out these actions and achieving your goals, adjusting them as necessary.
+Goals and actions: Проактивно ставить цели роста, выполнять конкретные actions, facilitate learning у stakeholders/fellow developers, активно искать feedback, рефлексировать и действовать по нему; регулярно валидировать приближение к goals и корректировать их при необходимости.
+Long-term development: Следить за направлениями software engineering, понимать возможные career paths и осознанно выбирать, каким ICT-профессионалом становиться.
+Personal Development Plan: Вести короткий, concise и flexible PDP/PLP как личное sprint-planning средство и основу coaching meetings; пересматривать и обновлять его регулярно, минимум каждый sprint, по мере развития projects/experiments и goals.
+Terminology note: канонические названия LO — Software Engineering, Software Quality, Software Maintenance, Professional Standard, Personal Leadership. В Canvas clarification headings местами встречаются прежние/расширенные labels “Software Quality Control” и “Software Delivery & Operations”; не считать их отдельными learning outcomes.
+LO depth: HBO-i, Bloom и Advanced
+Эта секция дополняет формулировки learning outcomes и нужна для оценки глубины evidence. Portfolio indication, HBO-i level и Bloom taxonomy связаны, но это разные шкалы: не переводить одну в другую механически.
+
+Три шкалы
+
+Bloom в portfolio: как выглядит evidence
+
+Что делает работу Advanced
+Engineering depth: Находить unknowns и complexity, двигаться через experiments и небольшие проверяемые шаги, а не только реализовывать feature.
+Quality depth: Искать релевантные standards и best practices, превращать quality/NFR в measurable criteria и доказывать соответствие tools, measures и reproducible validation.
+Improvement: Показывать, как feedback и результаты validation улучшили product, process, team или твой собственный способ работы.
+Multiple contexts: Для portfolio Advanced презентация ожидает in-depth knowledge и применение в нескольких contexts; один успешный context соответствует описанию Proficient.
+Teacher validation: Заранее спрашивать teachers, meaningful ли planned activities для конкретного LO, и показывать им depth. Финальную глубину не считать подтверждённой только по собственной оценке.
+Complex context: что именно искать
+Презентация описывает complex software context через несколько источников сложности. Они помогают объяснить, почему выбранные activities и validation действительно соответствуют advanced semester.
+
+Проверка любого evidence перед Portflow
+
+Personal Leadership: дополнительные сигналы
+Cycle: set goal → act → collect feedback → adjust actions. Этот цикл должен повторяться и быть виден в PDP/PLP и portfolio.
+Feedback ownership: Ты сам отвечаешь за сбор feedback; использовать peer review, feedback teachers и подходящих experts, а не ждать, пока его принесут.
+Plan as feedback: Timeline — не формальность: регулярно сравнивать фактический progress с plan и корректировать действия, если отстаёшь или меняется context.
+High agency: Цели должны превращаться в наблюдаемые действия и evidence того, что ты действительно над ними работаешь.
+Риски для assessment
+LO mapping presentation отдельно предупреждает о ситуациях, которые делают progress или evidence недостаточно видимыми: не показывать работу teachers/coach, не вести FeedPulse/portfolio, работать изолированно от group project, пропускать crucial moments, не иметь плана, не улучшать работу после feedback, не делать research либо ограничиваться superficial generated research. К финалу отдельный риск — недостаточный вклад в group work или несколько незакрытых LOs.
+Источник: “Complex Software Systems LOs” / 100_Advanced Software LOs mapping.pptx, Bartosz Paszkowski. HBO-i pass/Advanced targets также отражают устное уточнение teachers, переданное на занятии.
+Assessment, portfolio и evidence
+Модель assessment: Оценивание holistic и longitudinal: учитываются products, process, professionalism и развитие. Feedback ведёт процесс, assessment следует за ним.
+Validated content: Работу стоит класть в portfolio после того, как она хотя бы один раз была показана для feedback. Она не обязана быть закончена: ранний feedback нужен, чтобы подтвердить направление, authenticity и развитие по версиям.
+Feedback triangulation: Студент сам собирает feedback не только у regular coaches, но и у peers, stakeholders и подходящих experts. Важно показать, почему выбранный источник компетентен и что изменилось после его feedback.
+Show & grow: Первые три portfolio submissions нужны для коллективного взгляда teacher team на прогресс по learning outcomes. После каждого review нужно переработать evidence и закрывать gaps.
+Final submission: Четвёртая submission — финальная. Итог определяется по final portfolio, FeedPulse и study attitude. Минимальное правило Canvas: все learning outcomes должны быть продемонстрированы как минимум на уровне Proficient для satisfactory result или выше.
+PDP/PLP: Короткий living plan связывает личные цели, starting situation, group-project contribution, personal experiments, portfolio strategy и feedback. Его нужно пересматривать минимум каждый sprint.
+Жёсткие дедлайны в Canvas
+
+
+
+Важно: Первые три portfolio deliveries — формальные show & grow moments, а не требование показать полностью законченный продукт. Для каждой delivery создать frozen Portflow snapshot и отправить его через соответствующий Canvas assignment.
+Academic calendar и каникулы этого семестра
+AV-CSS S6 проходит через два Fontys educational periods и не заканчивается на Новый год. Course-specific финальные активности идут в январе: Final Portfolio Delivery — 20 Jan, Project Handover — 24 Jan, а week 19 с Assessment Talks / Final Delivery & Transfer начинается 25 Jan. Week 20, начинающаяся 1 Feb, в semester planning помечена Free; официальный Educational period 2 заканчивается 8 Feb 2027.
+
+Каникулы внутри AV-CSS S6
+
+Не включать: Spring break 9–15 Feb 2027 уже начинается после окончания Educational period 2 (8 Feb) и после AV-CSS semester planning, поэтому к каникулam этого S6 её не относить. Purple introduction week 24–28 Aug 2026 была до старта семестра.
+Источник: Fontys Academic calendar 2026–2027, даты переданы студентом 10 Sep 2026. Course-specific timeline и assignment due dates брать из Canvas/semester planning; при конфликте assignment due date в Canvas приоритетнее week-start planning.
+Semester timeline
+
+Источник: Semester Planning в Canvas. Week starts описывают planning, а не точные submission deadlines. Для portfolio/handover authoritative source — Canvas assignment due date; поэтому Third Portfolio Delivery = 13 Dec 2026, 23:59, хотя week 15 начинается 14 Dec. Workshops и presentations могут объявляться отдельно.
+Краткий справочник по урокам
+Здесь сохранён смысл всех 49 Canvas pages, но удалён полный повтор исходного текста. ChatGPT должен использовать эти описания как карту тем, а за точной формулировкой задания или дедлайна обращаться к соответствующей Canvas page.
+Модуль 1. Semester Information
+1. What will you learn?
+Обзор конечной цели AV-CSS: научиться создавать решения в сложных и неопределённых программных средах. Курс связывает инженерное мышление, измеримое качество, архитектурные компромиссы, быстрые прототипы и наблюдение за системой в работе.
+Темы: сложность и неопределённость; измеримые требования; архитектурные trade-offs; быстрый feedback; monitoring и troubleshooting; профессиональный совет заказчику.
+Canvas page
+2. How your semester is organized
+Карта всего семестра на 30 EC. Она объясняет, как командный проект, личные эксперименты, Core Knowledge, coaching, feedback и portfolio вместе дают доказательства по learning outcomes.
+Темы: команда из 3–6 человек; внешний stakeholder; sprint-работа; личный вклад; Personal Development Plan; portfolio и assessment.
+Canvas page
+3. Semester Planning
+Календарь семестра по учебным неделям: старт, sprint reviews, portfolio deliveries, международная неделя, работа над пробелами, финальная assessment-неделя и project handover. Страница нужна, чтобы заранее разложить работу, feedback и доказательства по времени.
+Темы: недели 1–20; sprint reviews; три промежуточные и финальная portfolio delivery; development talk; handover.
+Canvas page
+4. Group Project & Experiments Explained
+Разница между двумя главными форматами работы. Group project — 17-недельная командная работа для внешнего клиента; personal experiments — короткие индивидуальные исследования с прототипом, проверкой гипотезы и выводом.
+Темы: центральный research question; sprint до трёх недель; минимум два личных эксперимента; DOT-подход; measurable results; feedback.
+Canvas page
+5. Clarifications Learning Outcomes
+Расшифровка того, что означает уровень Proficient по пяти learning outcomes. Это не чек-лист, а ориентир для разговора с преподавателями и проверки, достаточно ли убедительно ты показываешь инженерное мышление, качество, delivery, leadership и research.
+Темы: Software Engineering; Software Quality; Software Maintenance (clarification content также использует label Software Delivery & Operations); Personal Leadership; Professional Standard; доказательства уровня Proficient.
+Canvas page
+6. Personal Development Planning
+Как вести короткий живой план собственного развития. Примерно одна A4 должна показывать стартовую точку, цели, действия, ожидаемые продукты, нужных экспертов и способ измерять прогресс; обновлять её нужно минимум каждый sprint.
+Темы: personal goals; learning outcomes; действия и professional products; feedback sources; sprint review личного прогресса.
+Canvas page
+7. Latest semester updates
+Журнал изменений курса. Для Fall 2026 радикальных перемен нет: уточнены цели, формулировки learning outcomes и semester process, добавлены страницы What will you learn и MyCoach; более крупный переход к широкому Complex Software Systems произошёл ранее.
+Темы: актуальность материалов; изменения Fall 2026; уточнение целей и процесса; история редизайна курса.
+Canvas page
+Модуль 2. General Information
+8. Feedback and FeedPulse
+Как запрашивать полезный feedback у преподавателей, одногруппников и экспертов и фиксировать его в FeedPulse. Важен не сам комментарий, а конкретный вопрос, контекст показанной работы, rating и видимое действие после полученного совета.
+Темы: specific feedback questions; peer review; FeedPulse; rating; перевод feedback в действия; evidence роста.
+Canvas page
+9. Available Infrastructure & Tools
+Справочник по доступным инструментам и инфраструктуре Fontys: студенческие лицензии, GenAI-модели, GitLab, Netlab, виртуальные машины, Kubernetes и облака. Главный практический акцент — хранить group project в Fontys ICT GitLab и контролировать облачные расходы.
+Темы: Fontys GitLab; student licenses; FHICT infrastructure; Azure, AWS и Google Cloud; LocalStack; cloud cost management.
+Canvas page
+10. Generative AI Usage Guidelines
+Правила ответственного использования GenAI. AI разрешён как партнёр по обучению, но ты обязан проверять результат, сохранять важные сессии, честно показывать вклад AI, рефлексировать над prompt-итерациями и уметь самостоятельно объяснить решения.
+Темы: critical thinking; AI as learning partner; transparency; ethics; сохранение AI-сессий; защита собственного понимания.
+Canvas page
+11. MyCoach at Fontys ICT (Eng)
+Инструкция по MyCoach — пространству для личных разговоров со student coach. Ты сам записываешь итоги встреч, action points и документы, а при смене coach выбираешь, какие заметки и материалы передать дальше.
+Темы: вход и настройки; unscheduled conversation; meeting recap; документы introductory и transfer meeting; handover новому coach.
+Canvas page
+Модуль 3. Portfolio & Assessment Proces
+12. Semester Assessment Process
+Как проходит оценивание. Ты постепенно собираешь validated content — работу, которую уже показывал для feedback, — и на четырёх формальных моментах получаешь development-oriented feedback; финальный portfolio служит основой итогового решения команды преподавателей.
+Темы: validated content; show-and-grow; четыре assessment moments; learning outcomes; holistic assessment; финальное решение teaching team.
+Canvas page
+13. Portflow at Fontys ICT
+Как построить portfolio в Portflow: импортировать semester template, создать sections и collections, привязать products к goals, запросить feedback и регулярно делать snapshots. Portfolio должен показывать и результат, и развитие работы по версиям.
+Темы: template SWOIAIL; sections, collections и products; goals; feedback requests; versions; frozen snapshots.
+Canvas page
+14. Portfolio Delivery
+Что именно сдаётся в формальные portfolio moments. Первые три сдачи дают ориентир по прогрессу, а четвёртая — финальный snapshot; формат review объявляет teaching team минимум за две недели.
+Темы: три development-oriented deliveries; финальная delivery; Portflow snapshot; Canvas assignment; подготовка evidence.
+Canvas page
+Модуль 4. Personal Leadership
+15. Career Development
+Урок о выборе долгосрочного направления в software career. Он предлагает следить за трендами, но особенно развивать переносимые навыки — понимание домена, design, debugging, security, review, документацию, презентацию и коммуникацию.
+Темы: career vision; lifelong learning; trend watching; Thoughtworks Technology Radar; transferable skills; цели на семестр.
+Canvas page
+16. Graduation Preparation
+Подготовка к следующему этапу: advanced semester, minor или graduation. Нужно заранее определить профессиональный фокус, изучить требования и варианты, подобрать подходящий контекст и начать формировать реалистичное graduation proposal вместе с coach.
+Темы: траектория после семестра; graduation context; professional focus; company и assignment; proposal; консультация с coach.
+Canvas page
+17. Setting Goals & Taking Action
+Как превратить общее желание в управляемое развитие. Сначала формируется видение на 3–5 лет, затем выявляются пробелы, ставятся SMART-цели, назначаются конкретные действия и регулярно проверяется прогресс.
+Темы: долгосрочное видение; gap analysis; SMART goals; action plan; tracking; reflection и корректировка.
+Canvas page
+Модуль 5. Student+ Fontys ICT
+18. Need extra support?
+Куда обратиться, если теряется контроль над планированием, падает мотивация или энергия, мешает личная ситуация либо особенности вроде ASD, ADHD или дислексии. Student+ предлагает бесплатную и конфиденциальную поддержку.
+Темы: Student+; planning и motivation support; wellbeing; neurodiversity; конфиденциальность; своевременное обращение.
+Canvas page
+Модуль 6. Professional Standard
+19. Applied Research
+Прикладное исследование здесь — не отдельный академический отчёт, а методичный способ создавать подходящие professional products для реальной проблемы. Research проходит через analysis, design и realization, а выбор методов зависит от контекста и зрелости технологии.
+Темы: context-specific problem; professional products; DOT Framework; library, field, workshop, lab и showroom strategies; Technology Readiness Level.
+Canvas page
+20. Giving and Receiving Feedback
+Как использовать feedback как двигатель обучения. Нужно целенаправленно спрашивать о конкретной работе и learning outcomes, осмысливать ответ, превращать его в действие и показывать следующую улучшенную версию.
+Темы: конкретный вопрос; feedback от peers, teachers и professionals; FeedPulse; action points; reflection; доказательство улучшения.
+Canvas page
+21. Sustainability and Transferability
+Урок объединяет экологическую устойчивость и возможность передать решение другим. Нужно учитывать энергопотребление, ресурсы и жизненный цикл software, а также делать архитектуру, код, инфраструктуру и документацию понятными и поддерживаемыми будущей командой.
+Темы: energy and resource efficiency; Green Software; SDGs; measurable sustainability criteria; maintainability; handover и reuse.
+Canvas page
+22. Long-term development
+Как работать с проектом, который должен жить после семестра. Работа проходит через Explore, Add Value и Handover; каждый sprint должен оставлять систему ближе к release-ready состоянию без зависимости от одного человека.
+Темы: Explore–Add Value–Handover; release readiness; technical debt; setup и documentation; versioning; security; knowledge transfer.
+Canvas page
+23. Advanced semester | Intercultural development
+Как сознательно развивать intercultural competence, а не просто находиться рядом с людьми другой культуры. Можно пройти IDI-based development plan или выбрать конкретные сложности multicultural teamwork, потренировать новые модели поведения и задокументировать рефлексию.
+Темы: intercultural awareness; conscious competence; IDI; multicultural teamwork; адаптация коммуникации; reflection и evidence.
+Canvas page
+Модуль 7. Core Knowledge
+24. About Core Knowledge
+Зачем существует блок Core Knowledge. Он даёт общий профессиональный словарь по complex software systems; от студента ждут базового обсуждения концепций и личного доказательства их применения в group project или experiments.
+Темы: общий vocabulary; связь с learning outcomes; минимум две новые концепции на sprint; теория, применение и advice; личный вклад.
+Canvas page
+25. About - Software Engineering Mindset
+Введение в инженерный образ мышления: решать практические проблемы эмпирически, двигаться небольшими проверяемыми шагами и видеть систему целиком. Архитектурные решения должны опираться на evidence, business context и понимание зависимостей.
+Темы: empirical approach; progressive steps; systems thinking; complexity management; informed decisions; sustainable solutions.
+Canvas page
+26. Software Engineering - Behavior
+Набор профессиональных привычек для работы с неопределённостью и сложностью. Первая группа — итеративность, маленькие increments, эксперименты и быстрый качественный feedback; вторая — modularity, cohesion, separation of concerns, abstraction и осознанный coupling.
+Темы: iterative, incremental, experimental и empirical work; fast feedback; modularity; cohesion; separation of concerns; information hiding; coupling.
+Canvas page
+27. Software Engineering Methodologies
+Краткое повторение Agile, Scrum и Extreme Programming как способов организовать работу со сложными проблемами. Scrum задаёт роли, события и artefacts, а XP добавляет инженерные ценности и практики вроде TDD, pair programming и continuous integration.
+Темы: Agile; Scrum roles, rituals и artefacts; XP values; pair programming; TDD; CI; simple design; collective ownership.
+Canvas page
+28. Complexity in Software Systems
+Что делает software system сложной и почему одного универсального инструмента не существует. Урок различает essential complexity домена и incidental complexity технологий и связывает ответ на них с engineering mindset, quality control и delivery/operations.
+Темы: essential и incidental complexity; uncertainty; feedback loops; non-functional requirements; production behavior; подбор подходящих методов под контекст.
+Canvas page
+29. Rapid Prototyping
+Как быстро проверять рискованные предположения рабочим, но уменьшенным прототипом. Сначала формулируется гипотеза и критерий успеха, затем строится минимальный сценарий, собирается feedback и принимается решение; GenAI можно использовать как ускоритель.
+Темы: hypothesis; minimum scenario; feasibility; early risk mitigation; rapid feedback; throwaway и evolutionary prototypes; measurable outcome.
+Canvas page
+30. Systems Thinking
+Как смотреть не на отдельный кусок кода, а на связи между компонентами, данными, инфраструктурой, людьми и бизнесом. Метод Zoom Out — Zoom In — Zoom Forward помогает увидеть boundaries, data flows, coupling, ограничения, масштабирование и будущие ripple effects.
+Темы: system boundaries; dependencies; data flows; synchronous и asynchronous communication; stakeholders; ripple effects; context, connection и impact maps.
+Canvas page
+31. Fitting organizational needs
+Как убедиться, что команда строит правильное решение для организации. Нужно понять реальный процесс stakeholder, его боли и критерии улучшения; Event Storming помогает собрать общую модель событий, а User Story Mapping — превратить её в работу.
+Темы: stakeholder organization; mental model; business processes; Event Storming; domain events; user story mapping; validation of value.
+Canvas page
+32. Software Engineering - Architecture
+Как из business goals, stakeholder needs и quality expectations получить начальную архитектуру. Урок рассматривает уровни архитектуры, NFR-driven decisions, layered, queue-worker, microservices и event-driven styles, communication, cross-cutting concerns, C4 diagrams и ADRs.
+Темы: architectural drivers; functional vs non-functional requirements; hybrid styles; cloud-native practices; sync/async communication; C4; ADR; fit-for-purpose trade-offs.
+Canvas page
+33. Software Engineering - Wisdom
+Набор коротких инженерных принципов для ежедневных решений: сначала понять правильную проблему, исследовать неизвестное, не строить ненужное, подготовить код к сложному изменению, не оптимизировать без измерений, рефлексировать и делать работу видимой.
+Темы: build the right thing / build it right; small-r research; YAGNI; make the change easy; premature optimization; What–So what–Now what; make work visible.
+Canvas page
+34. About - Software Quality Control
+Введение в качество как системную инженерную задачу. Команда выбирает релевантные функциональные и нефункциональные критерии, делает их измеримыми, связывает с архитектурой и непрерывно проверяет в рамках доступных ресурсов и trade-offs.
+Темы: ISO 25010; functional и non-functional quality; measurable benchmarks; continuous validation; ограниченные ресурсы; quality trade-offs; architecture link.
+Canvas page
+35. Quality Validation
+Полный цикл Software Quality Assurance: определить важное для stakeholders качество, задать числовые критерии, спроектировать систему под них и постоянно проверять. Рассматриваются test pyramid, contract и acceptance tests, security/performance checks, code review и CI/CD.
+Темы: quality attributes; specific measurable criteria; prevention vs detection; test pyramid; static analysis; security и performance testing; CI/CD evidence; continuous improvement.
+Canvas page
+36. Quality & System Thinking
+Почему одних тестов недостаточно. Tests только измеряют поведение, а способность системы выдержать нагрузку, сбои или другие требования определяется архитектурой; поэтому нужно сравнивать patterns прототипами и выбирать по измеримому результату и общему влиянию.
+Темы: quality criteria; architectural tactics; system-wide impact; hypotheses; rapid comparison of patterns; trade-offs; evidence-based choice.
+Canvas page
+37. Security
+Безопасность как часть всего software lifecycle, а не финальный pentest. Security-by-design объединяет risk analysis, обязательные действия в каждом sprint, OWASP knowledge, Definition of Done/Release, automation и ответственность людей и процессов.
+Темы: security-by-design; threat and impact analysis; secure lifecycle; OWASP Top 10; DevSecOps automation; people–process–technology; GenAI risks и prompt injection.
+Canvas page
+38. About - Software Delivery & Operations
+Введение в поддерживаемую поставку software в существующей организации. Большинство работы — brownfield: надо менять работающую систему без поломки текущего поведения, учитывать процессы и навыки stakeholder, автоматизировать delivery и измерять продукт и процесс.
+Темы: brownfield development; existing architecture; refactoring и testing; compatible delivery process; automation; runtime monitoring; DORA-inspired improvement.
+Canvas page
+39. DevOps
+DevOps объясняется не как инструмент или обязательная методология, а как набор принципов против медленных релизов, конфликтующих целей, позднего feedback и ручных ошибок. Основы — shared ownership, automation, small changes, observability и обучение без поиска виноватых; конкретная реализация зависит от контекста.
+Темы: shared responsibility; CI/CD; Infrastructure as Code; small batches; trunk-based development; feature toggles; SRE и platform engineering; culture and context.
+Canvas page
+40. Monitoring & Logging
+Разница между контролем здоровья системы и записью событий. Monitoring сравнивает metrics с SLI/SLO/SLA и подаёт alerts, а structured logs помогают восстановить последовательность происходящего; выбирать нужно только KPI, значимые для продукта и delivery process.
+Темы: metrics, dashboards и alerts; SLI/SLO/SLA; structured logs и audit trail; latency, errors, throughput и availability; product и process KPIs; Prometheus/Grafana/ELK/Loki.
+Canvas page
+41. Observability
+Как спроектировать distributed system так, чтобы разбирать неожиданные unknown-unknown failures. Logs, metrics и traces связываются через timestamps, labels и correlation IDs; instrumentation должна появляться в дизайне, а не добавляться после production incident.
+Темы: logs, metrics и distributed traces; context propagation; correlation ID; structured telemetry; OpenTelemetry; root-cause analysis; design for inspection.
+Canvas page
+Модуль 8. Personal Experiments
+42. About Personal Experiments
+Как выбрать и провести минимум два личных эксперимента по интересующей software-теме. Каждый должен быть связан с core skills, следовать методичному циклу Idea → Knowledge → Prototype → Evaluate → Advice и занимать не больше двух sprint.
+Темы: личный domain; research question; DOT Framework; fast prototype; measurable quality criteria; validation; advice; timebox до двух sprint.
+Canvas page
+43. Domain - Agentic Software Engineering
+Направление про автономных AI agents, которые рассуждают о требованиях, используют инструменты и участвуют во всём SDLC. Возможные эксперименты: автоматическое исправление build failures, agentic QA, синтез requirements и живая документация.
+Темы: AI agents vs copilots; human–AI workflow; tool use; autonomous maintenance; agentic testing; requirements synthesis; documentation-code sync; regression risk.
+Canvas page
+44. Domain - Cloud Native Engineering
+Направление про приложения, использующие elasticity, distributed coordination и managed cloud services. Эксперименты могут проверять fault tolerance, GitOps/IaC, event-driven autoscaling и end-to-end tracing с измеримыми RTO, latency и efficiency.
+Темы: elasticity и resilience; distributed systems; chaos engineering; circuit breaker; Terraform и GitOps; KEDA; OpenTelemetry; FinOps.
+Canvas page
+45. Domain - Cyber Security
+Направление про resilient systems и Security-by-Design на уровне архитектуры. Предлагаются threat modeling, защищённая supply chain с SBOM, Zero Trust между services и Policy-as-Code с измерением blast radius, remediation time и compliance.
+Темы: STRIDE и trust boundaries; attack surface; SBOM и SLSA; zero trust и mTLS; OPA policy-as-code; MTTD/MTTR; secure architecture.
+Canvas page
+46. Domain - Data Driven Engineering
+Направление, где data flow, integrity и real-time processing определяют архитектуру приложения. Эксперименты сравнивают Lambda/Kappa, строят data observability, Data Mesh product или dbt/ELT pipeline и измеряют freshness, quality и maintainability.
+Темы: streaming и pipelines; data quality; Lambda vs Kappa; schema evolution; Data Mesh; data as a product; dbt/ELT; data observability.
+Canvas page
+47. Domain - Green Software Engineering
+Направление про максимальную ценность при минимальном потреблении энергии и ресурсов. Можно исследовать carbon-aware scheduling, энергозатраты protocol/design patterns, поддержку старого hardware и уменьшение storage/network footprint.
+Темы: carbon efficiency; energy as a quality metric; carbon-aware scheduling; energy-per-transaction; hardware lifetime; TTL и efficient serialization; Scope 3.
+Canvas page
+48. Domain - High Performance Engineering
+Направление про throughput и низкую latency под тяжёлой нагрузкой. Предлагаются эксперименты с caching, Kafka streaming, concurrency models и edge computing, где результат доказывается P99 latency, RPS, memory footprint и data loss rate.
+Темы: throughput и tail latency; distributed caching; cache stampede; Kafka; concurrency; CPU/memory efficiency; CDN/edge; benchmarking.
+Canvas page
+Модуль 9. Catch-up Module
+49. Catching up module
+Проверка входных знаний из Full-stack Development. В первую неделю нужно найти пробелы в Agile, software process, CI/CD, quality, testing и full-stack, закрыть их маленьким personal project и суметь объяснить преподавателю setup и решения.
+Темы: Agile со stakeholder focus; простой software process; CI/CD automation; measurable quality; testing levels; frontend–backend communication; persistence и events.
+Canvas page
