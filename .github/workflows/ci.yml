@@ -9,9 +9,16 @@ on:
       - main
 
 jobs:
-  lint:
-    name: Lint Check
+  verify:
+    name: Verify (${{ matrix.service }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [flight, hotel, payment]
+
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
 
     steps:
       - name: Checkout repository
@@ -25,11 +32,11 @@ jobs:
       - name: Set up Python
         run: uv python install
 
-      - name: Install dependencies
-        run: uv sync --all-groups
-
       - name: Run Ruff Lint Check
-        run: uv run ruff check .
+        run: uvx ruff check .
 
-      - name: Run Ruff Format Check
-        run: uv run ruff format --check .
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run Pytest Suite
+        run: uv run pytest -v

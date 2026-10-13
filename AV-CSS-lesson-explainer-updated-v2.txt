@@ -2,25 +2,7 @@
 AV-CSS: структура, требования и темы
 Сжатая версия Canvas и стартовых сообщений semester team: без повторов и справочного шума.
 
-Инструкция для ChatGPT
-
-
-Начни отсюда: что делать сейчас
-
-
-
-Catch-up: Если есть пробелы в Agile, CI/CD, software quality, testing или full-stack development, определить их в week 1, потренироваться в маленьком personal project и обсудить setup с teacher.
-Расписание первой недели
-Monday 31 August: 09:00 — встреча студентов и teachers в Strijp TQ5.2; 10:00 — общий offline kick-off в Tribune De Visie, TQ5.2528; примерно 13:00–15:30 — знакомство с project stakeholders.
-Tuesday: Работа из дома; заранее договориться с группой и работать вместе online.
-Wednesday: Работа с командой на TQ утром; вторую половину дня можно продолжить online.
-Thursday 3 September: Первая demo delivery stakeholder. Встречу организует сама группа.
-Friday: Работа из дома и синхронизация с группой online.
-Обязательное присутствие: Стартовые дни проходят физически на площадке: формируются группы, назначаются coaches и начинаются встречи со stakeholder. Пропуск старта прямо назван semester team серьёзным риском.
-Коммуникация: При вопросах включать в переписку всех teachers, а не отвечать только автору welcome email. Teams и Canvas используются параллельно.
-Актуальное расписание: MyX roster
 Структура семестра
-
 
 Group Project: Команда из 3–6 студентов работает над authentic assignment внешнего stakeholder. Проект длится примерно 17 недель и идёт трёхнедельными sprints. Нужен не просто функциональный продукт, а valuable, maintainable и transferable solution с рабочими process, environment, quality criteria и tooling.
 Первые три sprints: Команда изучает core software-engineering concepts, переводит их в контекст проекта и решает, что внедрить, что проверить экспериментом, а по чему дать stakeholder advice. К концу Sprint 3 должна появиться основа и ясный план применения core skills.
@@ -102,7 +84,7 @@ AV-CSS S6 проходит через два Fontys educational periods и не 
 
 Каникулы внутри AV-CSS S6
 
-Не включать: Spring break 9–15 Feb 2027 уже начинается после окончания Educational period 2 (8 Feb) и после AV-CSS semester planning, поэтому к каникулam этого S6 её не относить. Purple introduction week 24–28 Aug 2026 была до старта семестра.
+Не включать: Spring break 9–15 Feb 2027 уже начинается после окончания Educational period 2 (8 Feb) и после AV-CSS semester planning, поэтому к каникулам этого S6 её не относить.
 Источник: Fontys Academic calendar 2026–2027, даты переданы студентом 10 Sep 2026. Course-specific timeline и assignment due dates брать из Canvas/semester planning; при конфликте assignment due date в Canvas приоритетнее week-start planning.
 Semester timeline
 
