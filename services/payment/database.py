@@ -3,6 +3,7 @@ Payment Service Database Layer.
 Manages customer account balances and atomic charge/refund operations via aiosqlite.
 """
 
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 import uuid
@@ -10,7 +11,10 @@ import aiosqlite
 from models import PaymentStatus
 
 
-DEFAULT_DB_PATH = str(Path(__file__).resolve().parent / 'payment.db')
+DEFAULT_DB_PATH = os.getenv(
+    'PAYMENT_DB_PATH',
+    str(Path(__file__).resolve().parent / 'payment.db'),
+)
 
 CREATE_ACCOUNTS_TABLE_SQL = '''
 CREATE TABLE IF NOT EXISTS accounts (

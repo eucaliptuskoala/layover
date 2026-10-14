@@ -40,3 +40,6 @@ jobs:
 
       - name: Run Pytest Suite
         run: uv run pytest -v
+
+      - name: Build Docker image
+        run: docker build -t ${{ matrix.service }}-service:latest .

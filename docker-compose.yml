@@ -1,0 +1,65 @@
+services:
+  flight-service:
+    build:
+      context: ./services/flight
+      dockerfile: Dockerfile
+    container_name: layover-flight
+    ports:
+      - "8001:8001"
+    environment:
+      - FLIGHT_DB_PATH=/app/data/flight.db
+    volumes:
+      - flight-data:/app/data
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  hotel-service:
+    build:
+      context: ./services/hotel
+      dockerfile: Dockerfile
+    container_name: layover-hotel
+    ports:
+      - "8002:8002"
+    environment:
+      - HOTEL_DB_PATH=/app/data/hotel.db
+    volumes:
+      - hotel-data:/app/data
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  payment-service:
+    build:
+      context: ./services/payment
+      dockerfile: Dockerfile
+    container_name: layover-payment
+    ports:
+      - "8003:8003"
+    environment:
+      - PAYMENT_DB_PATH=/app/data/payment.db
+    volumes:
+      - payment-data:/app/data
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  flight-data:
+    name: layover-flight-data
+  hotel-data:
+    name: layover-hotel-data
+  payment-data:
+    name: layover-payment-data

@@ -3,13 +3,17 @@ Flight Service Database Layer.
 Manages SQLite persistence for flight reservations via aiosqlite.
 """
 
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 import aiosqlite
 from models import FlightBookingStatus
 
 
-DEFAULT_DB_PATH = str(Path(__file__).resolve().parent / 'flight.db')
+DEFAULT_DB_PATH = os.getenv(
+    'FLIGHT_DB_PATH',
+    str(Path(__file__).resolve().parent / 'flight.db'),
+)
 
 CREATE_FLIGHT_TABLE_SQL = '''
 CREATE TABLE IF NOT EXISTS flight_bookings (

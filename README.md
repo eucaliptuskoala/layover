@@ -94,7 +94,25 @@ cp .env.example .env
 uv run pytest
 ```
 
-### 4. Start Local Temporal Server
+### 4. Run Services via Docker Compose
+
+To build and launch all three microservices with healthchecks and isolated persistent volumes:
+
+```bash
+# Build and start services in the background
+docker compose up -d --build
+
+# Inspect status and healthcheck results
+docker compose ps
+
+# View aggregated logs
+docker compose logs -f
+
+# Stop services
+docker compose down
+```
+
+### 5. Start Local Temporal Server
 
 For workflow orchestration in Cycle 4:
 

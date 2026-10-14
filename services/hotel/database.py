@@ -3,13 +3,17 @@ Hotel Service Database Layer.
 Manages SQLite persistence for hotel reservations via aiosqlite.
 """
 
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 import aiosqlite
 from models import HotelBookingStatus
 
 
-DEFAULT_DB_PATH = str(Path(__file__).resolve().parent / 'hotel.db')
+DEFAULT_DB_PATH = os.getenv(
+    'HOTEL_DB_PATH',
+    str(Path(__file__).resolve().parent / 'hotel.db'),
+)
 
 CREATE_HOTEL_TABLE_SQL = '''
 CREATE TABLE IF NOT EXISTS hotel_bookings (
