@@ -30,7 +30,7 @@ I designed these three services strictly around the **Database-per-Service** arc
 
 No service has direct database access to another service's tables. Communication happens exclusively over HTTP REST contracts.
 
-```
+```text
 +--------------------------------------------------------------------------+
 |                 Orchestrator Layer (Cycles 3 & 4)                        |
 |        (Sequential Try/Catch Baseline  OR  Temporal Saga Workflow)       |
@@ -70,7 +70,7 @@ I developed the services and their validation harness across four distinct steps
 
 Instead of keeping all three services in a single monolithic Python project with shared dependencies, I separated each service into its own folder with its own `pyproject.toml` and virtual environment managed by `uv`.
 
-```
+```text
 services/
 ├── flight/   # pyproject.toml, .venv, main.py, service.py, database.py, tests/
 ├── hotel/    # pyproject.toml, .venv, main.py, service.py, database.py, tests/
