@@ -1,0 +1,21 @@
+[project]
+name = "layover-gateway"
+version = "0.1.0"
+description = "Gateway application service for travel booking orchestration"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27.0",
+    "temporalio>=1.7.0",
+    "pydantic>=2.8.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+asyncio_mode = "auto"
+testpaths = ["tests"]

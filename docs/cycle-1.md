@@ -8,7 +8,7 @@
 
 ## 1. Executive Summary & Objectives
 
-- **Core Goal:** Research and understand how distributed systems work, how failures are handled, and establish an empirical framework for evaluating different failure handling strategies.
+- **Core Goal:** Understand why multi-service transactions break during partial failures, and define the test scenarios to compare in-memory rollbacks against Temporal.
 
 ---
 
@@ -22,7 +22,7 @@ Software architectures can be categorized by how components communicate and depl
 - **Microservices:** Business domains are divided into small, autonomous services that communicate over a network (HTTP/REST or gRPC). Each service has its own codebase, runtime, and deployment lifecycle. The benefit is independent deployment, clear ownership, and fault isolation. The cost is that every cross-boundary call must traverse an unreliable network, introducing latency, timeouts, and partial failure.
 - **Distributed Monolith (The Anti-Pattern):** Services are split into separate network runtimes, but remain tightly coupled through shared databases, shared code libraries, or synchronous cascade dependencies. This architecture suffers from all the operational complexity and network latency of microservices, without gaining any independence or autonomy.
 
-> **Design Rule for Layover:** Each service (`Flight`, `Hotel`, `Payment`) must run as an entirely autonomous process. They must never share runtime memory or internal code dependencies.
+> **Architectural Takeaway:** To avoid the distributed monolith trap, I isolate each domain (`Flight`, `Hotel`, `Payment`) into its own autonomous process with zero shared runtime memory or internal code dependencies.
 
 ---
 
@@ -41,7 +41,7 @@ To retrieve and view data spanning multiple domains, two primary patterns exist:
 1. **API Composition:** An aggregator component queries the individual services over HTTP and stitches the results together in memory.
 2. **Command Query Responsibility Segregation (CQRS):** Read views are separated from write models, using event subscribers to maintain denormalized read-only views across services.
 
-> **Design Rule for Layover:** True database isolation. Flight maintains `flight.db`, Hotel maintains `hotel.db`, and Payment maintains `payment.db`. To query booking status across all three services, the dashboard coordinator uses API Composition.
+> **Architectural Takeaway:** Because cross-service SQL joins violate service boundaries, I enforce database-per-service isolation (`flight.db`, `hotel.db`, `payment.db`). To retrieve combined booking states for the client, I use API Composition in the coordinator.
 
 ---
 
@@ -58,7 +58,7 @@ In any networked distributed system, network partitions (P) are an unavoidable p
 - **CP (Consistency over Availability):** The system rejects requests or halts execution until the network heals, ensuring no stale or conflicting data is recorded.
 - **AP (Availability over Consistency):** The system continues accepting requests on available nodes, sacrificing immediate consistency and reconciling data later (Eventual Consistency).
 
-> **Design Rule for Layover:** Over an HTTP network, we accept that network partitions (P) occur. Rather than halting the entire application when one downstream service times out (CP), we design for Availability (AP) and use compensation logic to achieve eventual consistency.
+> **Architectural Takeaway:** Since network partitions (P) are an unavoidable physical reality over HTTP, I choose an AP design over CP. Instead of halting the whole system during downstream timeouts, I prioritize availability and rely on compensating transactions to achieve eventual consistency.
 
 ### 2.4 ACID vs. BASE in Distributed Systems
 
@@ -75,7 +75,7 @@ Across distributed microservices with isolated databases, global ACID is impossi
 - **Soft State:** Data values may change over time without user interaction because the system is still reconciling intermediate steps (for example, a flight status may sit in `RESERVED` while payment is still processing).
 - **Eventual Consistency:** Given enough time without new failures, all participating databases converge to a consistent, agreed-upon terminal state.
 
-> **Design Rule for Layover:** Reject global locks. Treat intermediate states (`RESERVED`) as first-class citizens in service schemas, and ensure the workflow engine guarantees eventual transition to terminal states (`CONFIRMED` or `CANCELLED`).
+> **Architectural Takeaway:** Because global distributed locks are impractical across microservices, I embrace BASE semantics. Intermediate states (`RESERVED`) are treated as first-class statuses in each service's schema, and the workflow coordinator is responsible for driving them to a final terminal state (`CONFIRMED` or `CANCELLED`).
 
 ### 2.5 Two-Phase Commit (2PC) vs. The Saga Pattern
 
@@ -99,7 +99,7 @@ A Saga breaks a long distributed transaction into a sequence of **local transact
 
 Crucially, compensating actions must be **idempotent**: calling `/hotel/cancel` multiple times must produce the exact same outcome as calling it once, preventing duplicate refunds or crashes during retries.
 
-> **Design Rule for Layover:** Every service endpoint that mutates state (`/reserve`, `/charge`) MUST provide a corresponding, idempotent compensating endpoint (`/cancel`, `/refund`) that safely undoes the operation.
+> **Architectural Takeaway:** Because Two-Phase Commit is too heavy and locking for microservices, I adopt the Saga pattern. This requires that every mutating forward endpoint (`/reserve`, `/charge`) has a matching, idempotent compensating endpoint (`/cancel`, `/refund`) to allow safe rollbacks under failure.
 
 ### 2.6 Orchestration vs. Choreography
 
@@ -107,37 +107,53 @@ Sagas can be coordinated in two different styles:
 
 #### Choreography (Decentralized / Event-Driven)
 
-Services publish domain events to a shared message broker (e.g. RabbitMQ or Kafka), and other services listen and respond:
+Services publish domain events to a shared message broker (such as RabbitMQ or Kafka), and other services subscribe and react independently:
 
-- Flight reserves a seat and emits `FlightReserved`.
-- Hotel hears `FlightReserved`, books a room, and emits `HotelReserved`.
-- Payment hears `HotelReserved` and attempts to charge the card.
-- **Drawbacks:** There is no centralized place to inspect the state of a transaction. As the workflow grows, the event graph becomes tangled ("pinball machine architecture"), and tracing where a failed saga stalled requires querying multiple independent event streams.
+- Flight reserves a seat and publishes `FlightReserved`.
+- Hotel consumes `FlightReserved`, books a room, and publishes `HotelReserved`.
+- Payment consumes `HotelReserved` and charges the customer.
+- **Strengths:**
+  - **Loose coupling:** Services do not need to know about each other or a central coordinator; they only interact with message contracts.
+  - **High throughput:** No single coordinator bottleneck; ideal for event-driven broadcast workflows (e.g. sending confirmation emails, triggering analytics).
+  - **No single point of coordinator failure:** If one worker fails, others continue processing the queue independently.
+- **Trade-offs & Challenges:**
+  - **Distributed visibility:** There is no single place to query the current state of an in-flight booking. Understanding where a transaction stalled requires correlating logs across multiple independent event streams.
+  - **Complex rollback coordination:** If payment fails, compensation events (`PaymentFailed` $\rightarrow$ `CancelHotel` $\rightarrow$ `CancelFlight`) must propagate across services. As business workflows grow, the event graph can become tangled and difficult to debug ("pinball machine architecture").
 
 #### Orchestration (Centralized Coordinator)
 
-A single orchestrator component explicitly directs the workflow:
+A dedicated coordinator component explicitly invokes each service in a defined sequence via direct requests (HTTP or gRPC):
 
-- The orchestrator calls Flight (`POST /reserve`).
-- When Flight responds `200 OK`, the orchestrator calls Hotel (`POST /reserve`).
-- If Hotel fails or crashes, the orchestrator directly calls Flight's compensating endpoint (`POST /cancel`).
-- **Benefits:** The entire workflow state, execution timeline, and error branches are visible in one place. It is easy to reason about timeouts, retries, and rollback logic without needing an external message broker.
+- The coordinator calls Flight (`POST /reserve`).
+- Upon success, the coordinator calls Hotel (`POST /reserve`).
+- If any step fails, the coordinator explicitly executes the compensating rollback calls (e.g. `POST /flight/cancel`).
+- **Strengths:**
+  - **Centralized state & visibility:** The complete state machine, step sequence, and error branches live in one place. Clients can query the coordinator for immediate booking status.
+  - **Straightforward linear logic:** Easier to implement, trace, and reason about timeouts, conditional branches, and rollback order.
+- **Trade-offs & Challenges:**
+  - **Single point of failure / bottleneck:** If the coordinator goes down or becomes overloaded, new bookings stall unless the coordinator is designed for high availability.
+  - **Tighter coupling:** The coordinator must know the interfaces and endpoints of all participating microservices.
 
-> **Design Rule for Layover:** Use centralized orchestration. A travel booking is an inherently sequential, linear business process where centralized visibility, explicit error handling, and visual observability are paramount.
+> **Architectural Takeaway:** While choreography is effective for decoupled event broadcasting, a travel booking is an end-user synchronous request-response flow. I choose centralized orchestration because having an explicit coordinator makes the sequence predictable, errors immediately visible to the client, and recovery behavior straightforward to test and compare.
 
-### 2.7 Durable Execution & Temporal Architecture
+---
 
-Standard sequential scripts running in application memory (like planned ‹naive baseline) are ephemeral: if the server running the script restarts, crashes, or runs out of memory mid-transaction, all execution state is lost, leaving holds orphaned.
+### 2.7 In-Memory Saga vs. Durable Execution (Temporal)
 
-**Durable Execution** solves this by separating business logic from execution reliability:
+Once orchestration is chosen, the critical engineering question becomes: *How is the coordinator implemented?*
 
-- **Event Sourcing / Event History:** Every activity initiation, completion, timeout, and failure is recorded in an append-only event log.
-- **Deterministic Replay:** If an orchestrator worker crashes mid-workflow, a new worker restarts, reads the event history, replays the workflow code deterministically, fast-forwards through already completed steps without re-executing them, and resumes execution exactly where the failure occurred.
-- **Workflows vs. Activities:**
-  - *Workflows:* Pure orchestration logic. Must be deterministic (no random numbers, direct system clock reads, or direct network I/O).
-  - *Activities:* Non-deterministic operations that interact with the outside world (making HTTP requests to Flight, Hotel, Payment). Activities can be configured with automated retry policies, backoffs, and timeouts.
+1. **In-Memory Saga (Ad-Hoc / Procedural Rollbacks):**
+   A standard application script manages the sequence using local memory and `try/except` blocks:
+   - As each step succeeds, its compensating action is pushed onto an in-memory LIFO stack.
 
-> **Design Rule for Layover:** In Temporal, the booking sequence is implemented as a deterministic `@workflow.defn`. All HTTP calls to external microservices are isolated inside `@activity.defn` functions, each paired with an explicit compensating activity registered on the workflow's rollback stack.
+   - If a downstream service rejects a request (e.g. card declined), the `except` block iterates through the stack and calls `/cancel`.
+   - **The Critical Vulnerability:** All state exists solely in the process memory of the coordinator. If the coordinator process crashes (`kill -9`, server reboot, out-of-memory error) mid-transaction, the in-memory stack is wiped out instantly. Any reservations already made remain permanently held in downstream databases. Furthermore, if a network timeout occurs during a rollback call, an in-memory script has no persistent retry queue to guarantee delivery.
+
+2. **Durable Saga (Temporal Orchestration):**
+   A workflow orchestrator backed by a persistent event-sourcing engine:
+   - **Event History:** Every step initiation, success, failure, and timer is persisted to an append-only event log.
+   - **Deterministic Replay:** If the coordinator worker crashes mid-booking, a new worker restarts, reads the event history, replays the workflow state deterministically, and resumes execution exactly where it left off.
+   - **Durable Retries:** Both forward actions and compensating actions are executed as isolated activities with persistent retry policies and exponential backoff, ensuring network blips during rollbacks do not cause data loss.
 
 ---
 
@@ -145,115 +161,121 @@ Standard sequential scripts running in application memory (like planned ‹naive
 
 ### 3.1 Research Questions (RQs)
 
-- **RQ1:** To what extent does a naive sequential execution leave orphaned state in microservice databases under partial failure, compared to an orchestrated Saga pattern?
-- **RQ2:** What is the difference in recovery time and manual intervention required between in-process error handling and durable workflow orchestration following an unhandled coordinator crash?
-- **RQ3:** What is the overhead in code complexity, cognitive load, and operational requirements when introducing Temporal compared to standard sequential scripting?
+- **RQ1 (Data Consistency under Failure):** In which failure scenarios does an in-memory Saga coordinator successfully maintain database consistency, and under what specific conditions (process crash vs. network timeout) does it leave orphaned reservations behind?
+- **RQ2 (Recovery & Self-Healing):** How do the two approaches recover after a coordinator crash or service outage? Does the system heal automatically upon restart, or does it require manual database inspection and cleanup?
+- **RQ3 (Engineering & Operational Trade-off):** What is the practical trade-off between the code simplicity of an in-memory script and the operational overhead of running a durable workflow engine (Temporal)?
 
-### 3.2 Formal Hypotheses
+### 3.2 Hypotheses
 
-- **$H_1$ (Data Consistency):** The naive baseline will result in a consistency rate $C_r < 100\%$ under process termination (leaving orphaned holds), whereas the Temporal Saga will achieve $C_r = 100\%$ by automatically executing compensating rollbacks.
-- **$H_2$ (Recovery Overhead):** The naive baseline will require manual database cleanup script intervention upon crash, whereas Temporal will automatically reconcile or resume on worker restart with zero manual intervention.
-- **$H_3$ (Code Complexity & Maintainability):** Temporal reduces the lines of nested error-handling and rollback code in the coordinator, but introduces framework-specific learning curves and local infrastructure dependencies (`temporal server start-dev`).
+- **Hypothesis 1 (Business Errors vs. Infrastructure Crashes):**
+  - Under predictable **business rejections** (e.g. hotel overbooked, card declined), both the In-Memory Saga and Temporal will successfully execute compensating rollbacks and release held inventory.
+  - Under **infrastructure failures** (coordinator process termination mid-flight or network timeouts during cancellation), the In-Memory Saga will lose its execution state and leave orphaned holds in SQLite, whereas Temporal will achieve eventual consistency by replaying event history and retrying compensations.
+- **Hypothesis 2 (Operational Recovery Effort):**
+  - When the In-Memory coordinator crashes, fixing orphaned database records will require manual intervention (writing and executing SQL cleanup scripts).
+  - When the Temporal worker crashes and restarts, it will resume and complete pending workflows automatically without human intervention.
+- **Hypothesis 3 (Complexity vs. Guarantees):**
+  - An in-memory script is fast to write and requires zero extra infrastructure, making it attractive for simple prototypes. However, as rollback logic, retries, and timeout branches accumulate, the code becomes fragile. Temporal introduces a steeper learning curve and operational dependencies, but shifts the burden of state management and retries from application code to the platform.
 
 ---
 
 ## 4. Failure Scenario Walkthroughs
 
-The experiment tests multi-step bookings across three independent services (`Flight` :8001, `Hotel` :8002, `Payment` :8003). To evaluate resilience without relying on summary tables, each failure scenario is defined by its trigger point, injected fault, and expected outcome for both implementations.
+The experiment tests multi-step bookings across three independent services (`Flight` :8001, `Hotel` :8002, `Payment` :8003). To evaluate resilience, each scenario defines the trigger point, injected fault, and expected outcome for both implementations.
 
-### Scenario SC-01: Crash After Flight Reservation (Pre-Hotel)
+### Scenario SC-01: Hard Crash After Flight Reservation (Pre-Hotel)
 
 - **Execution Flow:** `POST /flight/reserve` succeeds $\rightarrow$ coordinator process crashes before calling `POST /hotel/reserve`.
-- **Injected Fault:** Hard process termination (`SIGKILL` / `os._exit(1)`) immediately after the flight reservation responds.
-- **Expected Database State (Naive Baseline):**
-  - `flight.db`: `RESERVED` (Orphaned hold; seat locked without a completed trip).
+- **Injected Fault:** Hard process termination (`SIGKILL`) immediately after the flight reservation responds.
+- **Expected Outcome (In-Memory Saga):**
+  - Process memory is wiped out; the rollback stack disappears.
+  - `flight.db`: `RESERVED` (Orphaned hold; seat locked without a completed trip or payment).
   - `hotel.db`: No record.
   - `payment.db`: No record.
-  - *Outcome:* Dirty zombie state. The seat is permanently lost to inventory until manual database intervention.
-- **Expected Database State (Temporal Saga):**
-  - Upon worker recovery or activity timeout, Temporal detects the incomplete workflow.
-  - The workflow executes the compensating action: `POST /flight/cancel`.
-  - `flight.db`: `CANCELLED`.
-  - *Outcome:* Clean terminal state ($C_r = 100\%$).
+  - *Result:* Inconsistent zombie state. The seat is permanently lost to inventory until someone manually cleans up the database.
+- **Expected Outcome (Temporal Saga):**
+  - The workflow execution is safely recorded in Temporal Server's event log.
+  - When a worker restarts (or times out), Temporal detects the incomplete workflow and executes the registered compensating activity: `POST /flight/cancel`.
+  - `flight.db`: Transitions to `CANCELLED`.
+  - *Result:* Clean, automatic rollback to a consistent state.
 
-### Scenario SC-02: Hotel Service Unreachable / Network Timeout
+### Scenario SC-02: Hotel Service Timeout or Error (Standard Failure)
 
 - **Execution Flow:** `POST /flight/reserve` succeeds $\rightarrow$ coordinator attempts `POST /hotel/reserve`, but the hotel service times out or returns HTTP 500.
-- **Injected Fault:** Hotel service delays response past client timeout (`asyncio.sleep(60)`) or returns 500 Internal Server Error.
-- **Expected Database State (Naive Baseline):**
-  - Coordinator enters in-memory `except` block. If it executes `cancel_flight()`, consistency is preserved. However, if the coordinator process crashes during this error handler, the flight hold remains permanently orphaned.
-- **Expected Database State (Temporal Saga):**
-  - Temporal catches the activity timeout, retries according to policy, and upon exhausting retries, triggers the rollback stack, calling `cancel_flight`.
+- **Injected Fault:** Hotel service delays response past client timeout or returns an error.
+- **Expected Outcome (In-Memory Saga):**
+  - The coordinator catches the exception in its `except` block, iterates through its rollback stack, and calls `cancel_flight()`.
+  - If the flight service is healthy and the coordinator stays alive, the flight hold is successfully cancelled.
+  - *Result:* Consistent state (demonstrating that In-Memory Saga works fine for standard, un-crashed error branches).
+- **Expected Outcome (Temporal Saga):**
+  - Temporal catches the activity timeout, retries according to policy, and upon exhausting retries, triggers the rollback stack calling `cancel_flight`.
   - `flight.db`: `CANCELLED`.
-  - `hotel.db`: No record (or cancelled).
-  - *Outcome:* Reliable automatic rollback guaranteed by durable event history.
+  - *Result:* Consistent state, with automatic retries before aborting.
 
-### Scenario SC-03: Crash After Hotel Reservation (Pre-Payment)
+### Scenario SC-03: Hard Crash After Hotel Reservation (Pre-Payment)
 
-- **Execution Flow:** `POST /flight/reserve` succeeds $\rightarrow$ `POST /hotel/reserve` succeeds $\rightarrow$ coordinator process crashes before calling `POST /payment/charge`.
-- **Injected Fault:** Simulated crash between Step 2 and Step 3.
-- **Expected Database State (Naive Baseline):**
-  - `flight.db`: `RESERVED`.
-  - `hotel.db`: `RESERVED`.
-  - `payment.db`: No record.
-  - *Outcome:* Double-orphaned zombie state. Two separate businesses hold inventory for a customer who was never charged.
-- **Expected Database State (Temporal Saga):**
-  - On restart, Temporal replays history, realizes flight and hotel succeeded, but payment was never initiated.
-  - It triggers compensation in reverse order: `cancel_hotel`, then `cancel_flight`.
+- **Execution Flow:** `POST /flight/reserve` succeeds $\rightarrow$ `POST /hotel/reserve` succeeds $\rightarrow$ coordinator process terminates before calling `POST /payment/charge`.
+- **Injected Fault:** Process termination between Step 2 and Step 3.
+- **Expected Outcome (In-Memory Saga):**
+  - Both flight and hotel remain in `RESERVED` status.
+  - *Result:* Double-orphaned state. Two separate services hold inventory for a customer who was never charged.
+- **Expected Outcome (Temporal Saga):**
+  - On restart, Temporal reads event history, identifies that payment was never initiated, and triggers compensation in reverse order: `cancel_hotel`, then `cancel_flight`.
   - Both databases record `CANCELLED`.
-  - *Outcome:* Clean terminal state.
+  - *Result:* Clean terminal state.
 
-### Scenario SC-04: Payment Declined (Business Error)
+### Scenario SC-04: Payment Declined (Business Logic Error)
 
-- **Execution Flow:** Flight and Hotel reservations succeed $\rightarrow$ Payment service responds with HTTP 402 (Insufficient Funds / Card Declined).
-- **Injected Fault:** Deterministic business error returned by the payment service.
-- **Expected Database State (Naive Baseline):**
-  - Sequential controller catches HTTP 402 and attempts sequential cancellations. Vulnerable to mid-rollback crashes.
-- **Expected Database State (Temporal Saga):**
-  - Payment activity throws non-retryable `ApplicationError`.
-  - Temporal executes the registered compensation stack, ensuring both hotel and flight holds are released.
-  - *Outcome:* Clean abort and full inventory release.
+- **Execution Flow:** Flight and Hotel reserved $\rightarrow$ Payment service responds with HTTP 400 (Insufficient Funds).
+- **Injected Fault:** Deterministic business rejection from the payment service.
+- **Expected Outcome (In-Memory Saga):**
+  - Coordinator catches HTTP 400 and calls `cancel_hotel` and `cancel_flight`. Both succeed.
+  - *Result:* Clean cancellation.
+- **Expected Outcome (Temporal Saga):**
+  - Payment activity throws non-retryable `ApplicationError`. Workflow triggers the compensation stack.
+  - *Result:* Clean cancellation.
 
-### Scenario SC-05: Crash Mid-Payment Charge
+### Scenario SC-05: Network Blip During Cancellation (Compensation Failure)
 
-- **Execution Flow:** Flight and Hotel reserved $\rightarrow$ `POST /payment/charge` initiated $\rightarrow$ process terminates while payment record is writing.
-- **Injected Fault:** Process terminates during credit card processing.
-- **Expected Database State (Naive Baseline):**
-  - Ambiguous / in-doubt state. Flight and hotel held, payment status unknown. Risk of double-charging if the user clicks "Retry".
-- **Expected Database State (Temporal Saga):**
-  - Temporal checks activity status using the unique `idempotency_key` (linked to `booking_id`).
-  - If payment completed before crash: workflow continues to confirm flight and hotel.
-  - If payment failed: workflow cleanly compensates flight and hotel.
-  - *Outcome:* Zero duplicate charges; consistent state.
+- **Execution Flow:** Payment fails $\rightarrow$ coordinator attempts to compensate by calling `cancel_flight()` $\rightarrow$ flight service experiences a temporary 3-second network drop.
+- **Injected Fault:** Transient connection drop injected during the rollback step.
+- **Expected Outcome (In-Memory Saga):**
+  - The in-memory script's rollback call fails with a connection error. Because it has no persistent retry queue, the script exits with an unhandled exception.
+  - `flight.db`: Remains `RESERVED` (orphaned).
+  - *Result:* Broken data due to lack of durable retries.
+- **Expected Outcome (Temporal Saga):**
+  - The compensating activity fails on attempt 1, waits with exponential backoff, and retries on attempt 2 after the network heals.
+  - `flight.db`: Successfully `CANCELLED`.
+  - *Result:* Guaranteed compensation delivery.
 
 ---
 
-## 5. Measurable Quality & Consistency Metrics
+## 5. Practical Evaluation Criteria
 
-Before running experiments in Cycles 3, 4, and 5, define objective formulas and metrics:
+Rather than relying on abstract formulas, the experiment evaluates the two approaches using concrete, observable criteria:
 
-### 5.1 Consistency Rate ($C_r$)
+### 5.1 Orphaned Reservation Count & Consistency
 
-A transaction is considered in a **clean state** if and only if it is either 100% completed or 100% compensated (all holds released).
+After each test scenario, I inspect the SQLite databases (`flight.db`, `hotel.db`, `payment.db`). A test run is considered **clean** if and only if all participating services reach an agreed-upon terminal state:
 
-$$\text{Consistency Rate } (C_r) = \frac{N_{\text{clean}}}{N_{\text{total}}} \times 100\%$$
+- **Clean Success:** Flight `CONFIRMED`, Hotel `CONFIRMED`, Payment `PAID`.
+- **Clean Abort:** All reserved holds are transitioned to `CANCELLED` (or refund issued).
+- **Orphaned / Zombie State:** Any record left in an intermediate `RESERVED` status without payment or cancellation.
 
-- **Clean States:**
-  - `SUCCESS`: Flight `CONFIRMED`, Hotel `CONFIRMED`, Payment `PAID`.
-  - `ABORTED`: Flight `CANCELLED`, Hotel `CANCELLED`, Payment `REFUNDED` (or not created).
-- **Dirty / Zombie States:**
-  - Any reservation held (`RESERVED`) without successful payment or completed cancellation.
+I record the exact count of orphaned holds generated by each coordinator across all crash scenarios.
 
-### 5.2 Recovery Time ($T_r$)
+### 5.2 Self-Healing vs. Manual Recovery Effort
 
-- **Definition:** Elapsed time from restarting crashed services until all databases reflect a terminal clean state (`CONFIRMED` or `CANCELLED`).
-- **Measurement Methodology:** Measure the timestamp delta from service reboot to the last recorded compensation or confirmation in SQLite audit logs.
+For every scenario involving a crash or transient failure:
 
-### 5.3 Error-Handling & Maintenance Complexity
+- Does the system automatically resolve its state upon service restart?
+- Or does it leave the database in an inconsistent state that requires manual operator intervention (writing and running custom SQL cleanup scripts)?
 
-- **Lines of Error-Handling Code (LoC):** Try/except blocks, manual rollback calls, state cleanup logic.
-- **Cyclomatic Complexity:** Number of independent execution branches needed to handle partial failure in the coordinator.
-- **Cognitive Overhead:** Qualitative assessment of understanding failure pathways.
+### 5.3 Implementation & Operational Footprint
+
+I document the practical overhead of both approaches:
+
+- **Application Code Complexity:** Number of lines of rollback code, nesting depth of `try/except` blocks, and mental overhead required to handle edge cases.
+- **Operational Dependencies:** A standalone Python script (zero infrastructure) vs. running a Temporal cluster (server process, database storage, gRPC networking, and worker deployment).
 
 ---
 
@@ -261,13 +283,13 @@ $$\text{Consistency Rate } (C_r) = \frac{N_{\text{clean}}}{N_{\text{total}}} \ti
 
 Post-test verification checklist to inspect SQLite databases:
 
-- [ ] **Flight Database (`flight.db`):**
+- **Flight Database (`flight.db`):**
   - Check reservation status (`RESERVED`, `CONFIRMED`, `CANCELLED`).
   - Verify seat hold timestamps and expiration.
-- [ ] **Hotel Database (`hotel.db`):**
+- **Hotel Database (`hotel.db`):**
   - Check room booking status (`RESERVED`, `CONFIRMED`, `CANCELLED`).
   - Verify room availability count match.
-- [ ] **Payment Database (`payment.db`):**
+- **Payment Database (`payment.db`):**
   - Verify payment status (`PENDING`, `COMPLETED`, `REFUNDED`, `FAILED`).
   - Verify transaction ID reference links to booking ID.
 

@@ -4,7 +4,7 @@
 
 When building distributed systems, things fail all the time: servers crash, network requests time out, and services go down mid-transaction. I want to understand how to keep data consistent when these failures happen.
 
-In this project, I will build a simple travel booking app with three independent microservices in Python (FastAPI), isolated SQLite databases, and a lightweight React (Vite) dashboard. Then, I will deliberately crash services halfway through a booking to compare two approaches: a standard sequential script (the naive baseline) versus a workflow orchestrator – Temporal's Python SD. I will measure which approach leaves broken data behind, how they recover, and what it takes to write and test them properly.
+In this project, I will build a simple travel booking app with three independent microservices in Python (FastAPI), isolated SQLite databases, and a lightweight React (Vite) dashboard. Then, I will deliberately crash services halfway through a booking to compare two approaches: an in-memory Saga script with ad-hoc rollbacks (the baseline) versus a durable workflow orchestrator using Temporal's Python SDK. I will measure which approach leaves broken data behind, how they recover, and what it takes to write and test them properly.
 
 ## What are you going to do?
 
@@ -17,7 +17,7 @@ I will build a small, complete booking application with three independent micros
 
 With this setup running, I will implement and test two different booking coordinators:
 
-1. **Version A (Naive Baseline):** A standard controller that calls Flight → Hotel → Payment one after another using basic HTTP requests. If something crashes mid-way, state is left unhandled.
+1. **Version A: In-Memory Saga Baseline (Ad-Hoc Rollbacks):** An in-memory controller that coordinates Flight → Hotel → Payment via direct HTTP requests and maintains an in-memory LIFO stack of compensating rollbacks in a `try/except` block. It handles simple business rejections, but cannot survive process termination or transient network failures during rollbacks.
 2. **Version B (Temporal Orchestration):** The same multi-step booking implemented as a durable Temporal workflow using the Saga pattern. If any step fails or crashes, Temporal automatically retries or triggers compensating actions (e.g., cancelling the hotel if payment fails).
 3. **Controlled Crash Testing:** I will simulate a failure (e.g. killing the hotel service right after flight reservation succeeds) and inspect the three databases. I will measure:
    - **Data consistency:** How many orphaned reservations exist (e.g., seats or rooms held without payment)?
@@ -42,9 +42,9 @@ I research and analyze how distributed systems handle transactions compared to t
 
 I define concrete, measurable quality criteria before running the experiments:
 
-- **Consistency rate:** The percentage of transactions that end up in a clean state (either 100% completed or 100% rolled back) versus an orphaned state.
-- **Recovery time:** How quickly the system resumes or rolls back after a crash.
-- **Error-handling complexity:** The lines of boilerplate code and mental overhead required to maintain rollback logic in a naive script vs. Temporal.
+- **Orphaned hold count & consistency:** The number of transactions that end up in a clean terminal state (completed or fully rolled back) versus leaving orphaned reservations (`RESERVED`) in the databases.
+- **Recovery behavior:** Does the system self-heal automatically upon service/worker restart, or does it require manual database queries and cleanup scripts?
+- **Error-handling complexity:** The lines of boilerplate code, try/except nesting, and mental overhead required to maintain rollback logic in an in-memory script vs. Temporal.
 
 ## Designing
 
@@ -65,7 +65,7 @@ I build the system incrementally using version control and proper engineering pr
 
 - **Microservices & UI:** Implement the three services using Python (FastAPI) and a lightweight UI dashboard in React (Vite) to interact with them and see live booking statuses.
 - **Automated Testing:** Write unit tests for each individual service and integration tests covering the complete booking flow using `pytest` and `httpx` async test clients.
-- **Version A (Naive):** Implement the simple sequential booking script and log the state transitions.
+- **Version A (In-Memory Saga):** Implement the in-memory rollback coordinator with LIFO compensation stack and log the state transitions.
 - **Version B (Temporal):** Set up local Temporal (`temporal server start-dev`), implement the saga workflow with the `temporalio` Python SDK, and register the compensating activities.
 - **Experiment Execution:** Run automated crash tests against both versions, capture database snapshots of the state, and use Temporal's built-in web UI to inspect the workflow event history.
 
@@ -98,7 +98,7 @@ I will execute the project across 5 structured cycles:
 | **Cycle 1: Research & Problem Scoping** | **Library:** Research Saga pattern, 2PC, ACID vs. BASE, and Temporal architecture. Define failure test scenarios. | A short research summary defining the failure matrix, hypotheses, and quality metrics. |
 | **Cycle 2: Microservices & Contracts** | **Workshop & Lab:** Build the 3 services in Python (FastAPI) with SQLite DBs, write unit tests with pytest for forward and compensation endpoints. | Working FastAPI microservices with pytest unit tests and independent SQLite DBs. |
 | **Cycle 3: Temporal Workflow & Compensation** | **Workshop & Lab:** De-risk core technology early: start local Temporal server, implement the booking saga with compensating rollbacks using temporalio, and write pytest tests. | Fully working Temporal saga in Python that automatically recovers and compensates after failures. |
-| **Cycle 4: Naive Baseline & React UI Dashboard** | **Lab:** Build the naive sequential coordinator script and the 1-page React (Vite) UI dashboard with a crash trigger. Run baseline crash tests. | Naive coordinator, React UI dashboard, and baseline crash test report. |
+| **Cycle 4: In-Memory Saga Baseline & React UI Dashboard** | **Lab:** Build the in-memory Saga coordinator with ad-hoc LIFO rollbacks and the 1-page React (Vite) UI dashboard with a crash trigger. Run baseline crash tests. | In-Memory Saga coordinator, React UI dashboard, and baseline crash test report. |
 | **Cycle 5: Comparison & Advisory Report** | **Lab & Advice:** Run identical crash tests on Temporal. Compare metrics, capture UI/flow screenshots, and write the final advice report. | Final comparison report (ADR), portfolio documentation, and review with coach. |
 
 ### Cycle Details
@@ -112,8 +112,8 @@ I will execute the project across 5 structured cycles:
 - **Cycle 3 — Temporal Workflow & Compensation:**
   De-risk the core new technology early: start the local Temporal engine (`temporal server start-dev`). Re-implement the booking workflow as a Temporal Saga using the `temporalio` Python SDK, where each step has a compensating activity. Run integration tests in `pytest` to ensure rollbacks trigger correctly.
 
-- **Cycle 4 — Naive Baseline & React UI Dashboard:**
-  Implement the naive sequential controller (straightforward HTTP calls with in-memory `try/except`) to serve as the baseline comparison. Build the simple frontend in React (Vite) to run bookings, view service statuses, and trigger simulated service crashes. Run the baseline crash test and record orphaned database holds.
+- **Cycle 4 — In-Memory Saga Baseline & React UI Dashboard:**
+  Implement the in-memory Saga controller (HTTP calls with an in-memory LIFO compensation stack in `try/except`) to serve as the baseline comparison. Build the simple frontend in React (Vite) to run bookings, view service statuses, and trigger simulated service crashes. Run baseline crash tests and record orphaned database holds.
 
 - **Cycle 5 — Comparison & Advisory Report:**
   Run the crash test against the Temporal version. Document the difference in consistency (orphaned holds vs. clean cancellations) and inspect the runs in Temporal Web UI. Write the final ADR / advice report summarizing trade-offs and recommendations.

@@ -1,0 +1,14 @@
+[project]
+name = "layover-clients"
+version = "0.1.0"
+description = "CLI entrypoints for Layover travel booking system"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27.0",
+    "temporalio>=1.7.0",
+    "pydantic>=2.8.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+asyncio_mode = "auto"
