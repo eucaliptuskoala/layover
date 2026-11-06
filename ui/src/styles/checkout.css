@@ -1,0 +1,671 @@
+@layer components {
+  .checkout-topbar-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    height: 100%;
+    padding: 0 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.3em;
+  }
+  .brand svg {
+    width: 23px;
+    height: 23px;
+    color: var(--color-emerald-700);
+    transition: transform 200ms ease;
+  }
+  .brand:hover svg {
+    transform: translate(1px, -1px) rotate(-4deg);
+  }
+  .account-badge {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 40px;
+    padding: 5px 13px 5px 6px;
+    border-radius: 999px;
+    border: 1px solid var(--color-line);
+    background: white;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 3%);
+  }
+  .account-avatar {
+    width: 27px;
+    height: 27px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--color-emerald-50);
+    border: 1px solid #bbf7d0;
+    color: var(--color-emerald-800);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .account-separator {
+    width: 1px;
+    height: 14px;
+    background: var(--color-line-strong);
+  }
+  .account-seed {
+    font-size: 10px;
+    color: var(--color-faint);
+  }
+  .checkout-main {
+    padding: 26px 24px 40px;
+  }
+  .checkout-column {
+    width: 100%;
+    max-width: 780px;
+    margin: 0 auto;
+  }
+  .route {
+    display: grid;
+    grid-template-columns: auto minmax(64px, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+    margin-top: 15px;
+  }
+  .route-end {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.038em;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .route-end small {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--color-faint);
+  }
+  .route-arch {
+    position: relative;
+    height: 46px;
+  }
+  .route-arch > svg {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 30px;
+    overflow: visible;
+  }
+  .route-plane {
+    position: absolute;
+    left: 50%;
+    top: 14px;
+    transform: translate(-50%, -50%);
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: white;
+    border: 1px solid #f3d9ae;
+    color: var(--color-amber-700);
+    box-shadow: 0 2px 6px rgb(180 83 9 / 12%);
+  }
+  .route-plane svg {
+    width: 12px;
+    height: 12px;
+  }
+  .route-duration {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--color-faint);
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+  .trip-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .trip-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-muted);
+    font-size: 11.5px;
+    font-weight: 500;
+  }
+  .trip-meta span + span::before {
+    content: '';
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #c3d0c8;
+    margin-right: 6px;
+  }
+  .trip-meta svg {
+    width: 12px;
+    height: 12px;
+    color: var(--color-faint);
+  }
+  .itinerary-note {
+    margin-top: 6px;
+    color: var(--color-faint);
+    font-size: 10px;
+  }
+  .checkout-stack {
+    display: grid;
+    gap: 12px;
+    margin-top: 18px;
+  }
+  .boarding-pass {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 18px;
+    padding: 15px 18px;
+    border: 1px solid var(--color-line);
+    border-radius: 14px;
+    background: #fcfdfc;
+    transition:
+      border-color 200ms ease,
+      transform 200ms ease,
+      box-shadow 200ms ease;
+  }
+  .boarding-pass:hover,
+  .hotel-card:hover {
+    border-color: var(--color-line-strong);
+    box-shadow: 0 12px 30px -10px rgb(15 23 42 / 10%);
+    transform: translateY(-1px);
+  }
+  .carrier-mark {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    flex: none;
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    color: var(--color-amber-800);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .flight-number {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-muted);
+    padding: 2px 6px;
+    border: 1px solid var(--color-line);
+    border-radius: 5px;
+    background: #f7faf8;
+    white-space: nowrap;
+  }
+  .flight-times {
+    display: grid;
+    grid-template-columns: auto minmax(30px, 1fr) auto;
+    align-items: end;
+    gap: 12px;
+    margin-top: 13px;
+  }
+  .flight-times strong {
+    display: block;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+  .flight-times small {
+    display: block;
+    margin-top: 4px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--color-faint);
+  }
+  .flight-line {
+    position: relative;
+    display: grid;
+    place-items: center;
+    height: 16px;
+    margin-bottom: 4px;
+  }
+  .flight-line::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: repeating-linear-gradient(to right, #d7e1da 0 3px, transparent 3px 7px);
+  }
+  .flight-line svg {
+    position: relative;
+    width: 19px;
+    height: 11px;
+    padding: 0 4px;
+    box-sizing: content-box;
+    color: var(--color-amber-600);
+    background: #fcfdfc;
+  }
+  .flight-price {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 4px;
+    align-self: stretch;
+    padding-left: 18px;
+    border-left: 1px solid var(--color-line-soft);
+  }
+  .flight-price span {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-faint);
+  }
+  .flight-price strong {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .hotel-card {
+    display: grid;
+    grid-template-columns: 80px minmax(0, 1fr);
+    gap: 14px;
+    align-items: center;
+    border: 1px solid var(--color-line);
+    border-radius: 14px;
+    padding: 10px;
+    background: #fcfdfc;
+    transition:
+      border-color 200ms ease,
+      transform 200ms ease,
+      box-shadow 200ms ease;
+  }
+  .hotel-thumbnail {
+    width: 80px;
+    height: 80px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #efe4ce;
+    background: #f6ead4;
+  }
+  .hotel-thumbnail svg {
+    width: 100%;
+    height: 100%;
+  }
+  .hotel-name {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+  .price-summary {
+    padding: 18px 20px 16px;
+  }
+  .price-rows {
+    margin-top: 8px;
+  }
+  .price-rows > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 3px 0;
+    font-size: 12px;
+    color: var(--color-muted);
+  }
+  .price-rows em {
+    font-style: normal;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--color-faint);
+    margin-left: 6px;
+    letter-spacing: 0.04em;
+  }
+  .price-rows > div > span:last-child {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-ink);
+    white-space: nowrap;
+  }
+  .price-rows > div > span.included {
+    color: var(--color-emerald-800);
+    font-size: 10px;
+  }
+  .price-total {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--color-line-strong);
+  }
+  .price-total > span {
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .price-total small {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--color-faint);
+    margin-left: 5px;
+    letter-spacing: 0.08em;
+  }
+  .price-total strong {
+    font-family: var(--font-mono);
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.045em;
+    line-height: 1;
+  }
+  .saga-note {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 12px 0;
+    border-top: 1px solid var(--color-line);
+    border-bottom: 1px solid var(--color-line-soft);
+  }
+  .saga-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    flex: none;
+    background: var(--color-emerald-50);
+    border: 1px solid #bbf7d0;
+    color: var(--color-emerald-800);
+  }
+  .saga-icon svg {
+    width: 15px;
+    height: 15px;
+  }
+  .saga-note strong {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--color-emerald-900);
+  }
+  .saga-note strong + span {
+    display: block;
+    font-size: 11px;
+    color: var(--color-muted);
+  }
+  .payment-method {
+    position: relative;
+    padding: 8px 10px;
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+    margin-top: 12px;
+  }
+  .demo-card {
+    width: 34px;
+    height: 23px;
+    border-radius: 5px;
+    position: relative;
+    flex: none;
+    background: linear-gradient(135deg, #1e3a8a, #1d4ed8 62%, #3b82f6);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 18%);
+  }
+  .demo-card[data-brand='Amex'] {
+    background: linear-gradient(135deg, #0e7490, #0891b2 62%, #22d3ee);
+  }
+  .demo-card::before {
+    content: '';
+    position: absolute;
+    left: 5px;
+    right: 5px;
+    top: 6px;
+    height: 3px;
+    border-radius: 1px;
+    background: rgb(255 255 255 / 55%);
+  }
+  .demo-card::after {
+    content: '';
+    position: absolute;
+    right: 5px;
+    bottom: 5px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 35%);
+  }
+  .change-card {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 32px;
+    padding: 0 8px;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-emerald-800);
+  }
+  .change-card:hover {
+    background: #f0fdf4;
+  }
+  .change-card svg {
+    width: 11px;
+    height: 11px;
+  }
+  .demo-card-options {
+    margin-top: 8px;
+    padding: 8px;
+    border-top: 1px solid var(--color-line-soft);
+    display: grid;
+    gap: 8px;
+    font-size: 12px;
+  }
+  .demo-card-options label {
+    cursor: pointer;
+  }
+  .pay-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: 100%;
+    min-height: 54px;
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #17863f 0%, #15803d 52%, #126b34 100%);
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    box-shadow:
+      0 10px 22px -12px rgb(21 128 61 / 65%),
+      inset 0 1px 0 rgb(255 255 255 / 24%),
+      inset 0 -1px 0 rgb(0 0 0 / 12%);
+    transition:
+      transform 200ms ease,
+      box-shadow 200ms ease;
+  }
+  .pay-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 30px -14px rgb(21 128 61 / 70%);
+  }
+  .pay-button:disabled {
+    opacity: 0.65;
+    box-shadow: none;
+  }
+  .pay-amount {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0.92;
+  }
+  .payment-caption {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 9px;
+    font-size: 10px;
+    color: var(--color-faint);
+  }
+  .payment-caption svg {
+    width: 11px;
+    height: 11px;
+  }
+  .checkout-legal {
+    margin: 16px 4px 0;
+    font-size: 10px;
+    line-height: 1.6;
+    color: var(--color-faint);
+    text-align: center;
+  }
+  .booking-banner {
+    border: 1px solid #cbe8d6;
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: #f0fdf4;
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--color-muted);
+  }
+  .booking-banner a {
+    display: inline-block;
+    margin-top: 5px;
+    color: var(--color-emerald-800);
+    font-weight: 600;
+  }
+  .booking-banner.warning {
+    background: #fffbeb;
+    border-color: #f0dcb4;
+  }
+  .loading-card {
+    margin-top: 18px;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    text-align: center;
+  }
+  .loading-card > svg {
+    width: 24px;
+    height: 24px;
+    color: var(--color-amber-700);
+  }
+  .loading-card .btn {
+    max-width: 220px;
+  }
+}
+
+@media (max-width: 620px) {
+  .topbar {
+    height: 62px;
+  }
+  .checkout-topbar-inner {
+    padding: 0 16px;
+  }
+  .brand {
+    font-size: 13px;
+    letter-spacing: 0.22em;
+  }
+  .account-badge {
+    gap: 7px;
+    padding-right: 10px;
+  }
+  .account-separator,
+  .account-seed {
+    display: none;
+  }
+  .account-avatar {
+    width: 25px;
+    height: 25px;
+  }
+  .checkout-main {
+    padding: 20px 14px 100px;
+  }
+  .route {
+    gap: 10px;
+  }
+  .route-end {
+    font-size: 21px;
+  }
+  .route-end small {
+    font-size: 10px;
+  }
+  .trip-meta {
+    gap: 8px;
+  }
+  .trip-meta span {
+    font-size: 10px;
+  }
+  .boarding-pass {
+    gap: 12px;
+    padding: 13px 14px;
+  }
+  .flight-price {
+    padding-left: 14px;
+  }
+  .flight-price strong {
+    font-size: 14px;
+  }
+  .hotel-card {
+    grid-template-columns: 68px minmax(0, 1fr);
+    gap: 10px;
+  }
+  .hotel-thumbnail {
+    width: 68px;
+    height: 68px;
+  }
+  .hotel-name {
+    font-size: 12px;
+  }
+  .price-summary {
+    padding: 16px 14px;
+  }
+  .saga-meta {
+    display: none;
+  }
+}
+@media (max-width: 480px) {
+  .route-duration {
+    display: none;
+  }
+  .route-arch {
+    height: 32px;
+  }
+  .price-rows em {
+    display: none;
+  }
+}
+@media (max-width: 400px) {
+  .route {
+    grid-template-columns: auto minmax(28px, 1fr) auto;
+    gap: 5px;
+  }
+  .route-end {
+    font-size: 18px;
+  }
+  .route-end small {
+    font-size: 9px;
+  }
+  .eyebrow {
+    font-size: 9px;
+  }
+  .account-avatar {
+    display: none;
+  }
+}

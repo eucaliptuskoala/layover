@@ -103,6 +103,7 @@ This validates both that the container process is alive and that the Python runt
 A container's filesystem is ephemeral by default. If a container stops or restarts, unmounted database files disappear.
 
 I configured three independent named volumes (`flight-data`, `hotel-data`, `payment-data`). This ensures:
+
 1. Data persists across `docker compose restart` or container rebuilds.
 2. Complete physical isolation: the Flight container cannot mount or access `payment-data`.
 

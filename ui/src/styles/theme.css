@@ -1,0 +1,304 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans:
+    'Plus Jakarta Sans Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+  --color-canvas: #f8faf8;
+  --color-surface: #ffffff;
+  --color-well: #f1f5f2;
+  --color-ink: #0f172a;
+  --color-muted: #475569;
+  --color-faint: #5b6b7c;
+  --color-line: #e2e8e2;
+  --color-line-soft: #ecf1ed;
+  --color-line-strong: #cfdad2;
+  --color-emerald-900: #14532d;
+  --color-emerald-800: #166534;
+  --color-emerald-700: #15803d;
+  --color-emerald-600: #16a34a;
+  --color-emerald-50: #dcfce7;
+  --color-amber-800: #92400e;
+  --color-amber-700: #b45309;
+  --color-amber-600: #d97706;
+  --color-rose-800: #9f1239;
+  --color-rose-700: #be123c;
+  --color-rose-600: #e11d48;
+  --shadow-card: 0 4px 20px -2px rgb(0 0 0 / 4%), 0 1px 3px rgb(0 0 0 / 2%);
+  --shadow-pop: 0 24px 60px -18px rgb(15 23 42 / 22%), 0 6px 18px rgb(15 23 42 / 6%);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    background:
+      radial-gradient(900px 540px at 6% -14%, rgb(21 128 61 / 5.5%), transparent 66%),
+      radial-gradient(780px 480px at 100% -8%, rgb(217 119 6 / 5%), transparent 70%);
+  }
+  button,
+  input,
+  select {
+    font: inherit;
+  }
+  button,
+  a,
+  label {
+    -webkit-tap-highlight-color: transparent;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  input[type='radio'],
+  input[type='checkbox'] {
+    accent-color: var(--color-emerald-700);
+  }
+  input[type='checkbox'] {
+    flex: none;
+    margin-top: 2px;
+  }
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  svg {
+    display: block;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-emerald-700);
+    outline-offset: 3px;
+  }
+  ::selection {
+    background: rgb(21 128 61 / 16%);
+    color: var(--color-emerald-900);
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5ce transparent;
+  }
+  [hidden] {
+    display: none !important;
+  }
+}
+
+@layer components {
+  .card {
+    border: 1px solid var(--color-line);
+    border-radius: 20px;
+    background: white;
+    box-shadow: var(--shadow-card);
+  }
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    height: 68px;
+    border-bottom: 1px solid var(--color-line);
+    background: rgb(248 250 248 / 88%);
+    backdrop-filter: blur(18px) saturate(1.25);
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-faint);
+    line-height: 1.3;
+  }
+  .eyebrow svg {
+    width: 12px;
+    height: 12px;
+    flex: none;
+  }
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-emerald-600);
+    display: inline-block;
+    flex: none;
+  }
+  .status-dot.amber {
+    background: var(--color-amber-600);
+  }
+  .status-dot.rose {
+    background: var(--color-rose-600);
+  }
+  .icon-button {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    flex: none;
+    color: var(--color-muted);
+    border: 1px solid transparent;
+    transition:
+      background 150ms ease,
+      color 150ms ease;
+  }
+  .icon-button:hover {
+    background: var(--color-well);
+    border-color: var(--color-line);
+    color: var(--color-ink);
+  }
+  .icon-button:disabled {
+    opacity: 0.5;
+  }
+  .icon-button svg {
+    width: 15px;
+    height: 15px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 40px;
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    transition:
+      background 150ms ease,
+      box-shadow 150ms ease;
+  }
+  .btn svg {
+    width: 14px;
+    height: 14px;
+    flex: none;
+  }
+  .btn-primary {
+    background: var(--color-emerald-700);
+    color: white;
+    box-shadow: 0 6px 14px -7px rgb(21 128 61 / 55%);
+  }
+  .btn-primary:hover {
+    background: var(--color-emerald-800);
+  }
+  .btn-ghost {
+    border: 1px solid var(--color-line-strong);
+    background: white;
+    color: var(--color-ink);
+  }
+  .btn-ghost:hover {
+    background: var(--color-well);
+  }
+  .skip-link {
+    position: fixed;
+    left: 16px;
+    top: -60px;
+    z-index: 100;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: var(--color-ink);
+    color: white;
+  }
+  .skip-link:focus {
+    top: 12px;
+  }
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    max-width: min(550px, calc(100% - 28px));
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid #bbf7d0;
+    background: #f7fdf9;
+    color: var(--color-emerald-900);
+    box-shadow: var(--shadow-pop);
+    font-size: 12px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 15px);
+    transition:
+      opacity 200ms ease,
+      transform 200ms ease;
+  }
+  .toast.is-visible {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  .recovery-page {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+  }
+  .button-spinner,
+  .waiting-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 800ms linear infinite;
+  }
+  .spin {
+    animation: spin 1s linear infinite;
+  }
+  .pulse {
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
