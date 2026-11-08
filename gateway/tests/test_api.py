@@ -11,6 +11,7 @@ from httpx import ASGITransport, AsyncClient
 from main import app
 from models import (
     BookingResponse,
+    OrchestratorType,
     ServiceHealth,
     SystemHealthReport,
 )
@@ -142,6 +143,30 @@ async def test_create_booking_validation_error(test_client: AsyncClient):
     response = await test_client.post('/api/bookings', json=payload)
 
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize('engine', list(OrchestratorType))
+async def test_booking_endpoint_uses_strategy_selection(test_client: AsyncClient, engine, monkeypatch):
+    import dispatcher
+
+    strategy = AsyncMock(spec=dispatcher.SagaOrchestratorStrategy)
+    strategy.execute.return_value = BookingResponse(
+        booking_id='bk-api-strategy', orchestrator=engine.value, scenario='fail_hotel',
+        status='COMPENSATED', total_amount=299.0,
+        steps_completed=['reserve_flight'], compensations_executed=['cancel_flight'],
+    )
+    monkeypatch.setitem(dispatcher.STRATEGIES, engine, strategy)
+
+    response = await test_client.post('/api/bookings', json={
+        'booking_id': 'bk-api-strategy', 'orchestrator': engine.value, 'scenario': 'fail_hotel',
+    })
+
+    assert response.status_code == 200
+    assert response.json()['orchestrator'] == engine.value
+    assert response.json()['scenario'] == 'fail_hotel'
+    assert response.json()['compensations_executed'] == ['cancel_flight']
+    strategy.execute.assert_awaited_once()
+    assert strategy.execute.call_args.args[1]['hotel_price'] == -1.0
 
 
 @pytest.mark.asyncio

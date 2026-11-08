@@ -13,6 +13,7 @@ export function BookingOutcome({
   notify: (message: string) => void;
 }) {
   const response = run.phase === 'result' ? run.response : null;
+  const isNaive = run.request.orchestrator === 'naive';
   const presentation = response
     ? getOutcome(response)
     : {
@@ -26,7 +27,9 @@ export function BookingOutcome({
               : 'OUTCOME UNKNOWN',
         note:
           run.phase === 'pending'
-            ? 'Waiting for the gateway to finish the booking workflow. This can take longer during retries or if a worker is offline.'
+            ? isNaive
+              ? 'Waiting for the gateway to finish single-attempt HTTP actions. Rollback state exists only in gateway memory.'
+              : 'Waiting for the gateway to finish the booking workflow. This can take longer during retries or if a worker is offline.'
             : run.phase === 'unknown' || run.phase === 'rejected'
               ? run.message
               : '',
@@ -70,7 +73,9 @@ export function BookingOutcome({
           <>
             <div className="flex items-center justify-between gap-2 text-[11px] text-muted">
               <span>Execution</span>
-              <b className="font-mono text-ink">Temporal workflow</b>
+              <b className="font-mono text-ink">
+                {isNaive ? 'In-memory Saga' : 'Temporal workflow'}
+              </b>
             </div>
             <div
               className="indeterminate-progress"
@@ -78,7 +83,8 @@ export function BookingOutcome({
               role="progressbar"
             />
             <p className="text-[11px] text-muted mt-3">
-              This request is submitted once. Leaving this screen does not cancel the workflow.
+              This request is submitted once. Navigating within this app does not cancel the
+              booking.
             </p>
           </>
         ) : (

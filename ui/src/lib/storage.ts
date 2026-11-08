@@ -59,8 +59,12 @@ export function readRun(): BookingRun | null {
         ...value,
         phase: 'unknown',
         message:
-          'This page was refreshed before a result was saved. The workflow may still be running. ' +
-          'Inspect this booking in Temporal; it has not been resubmitted.',
+          value.request.orchestrator === 'naive'
+            ? 'This page was refreshed before a result was saved. The in-memory Saga may still be running or may have stopped. ' +
+              'It does not recover automatically after a gateway crash. Service state may need manual reconciliation; ' +
+              'this booking has not been resubmitted.'
+            : 'This page was refreshed before a result was saved. The workflow may still be running. ' +
+              'Inspect this booking in Temporal; it has not been resubmitted.',
       } as BookingRun;
     }
     if (

@@ -43,4 +43,19 @@ describe('sandbox persistence', () => {
     sessionStorage.setItem('layover.ui.run.v1', JSON.stringify({ phase: 'result', response: {} }));
     expect(readRun()).toBeNull();
   });
+
+  it('restores a pending naive request with engine-appropriate reconciliation guidance', () => {
+    saveRun({
+      phase: 'pending',
+      request: { booking_id: 'bk-naive', orchestrator: 'naive', scenario: 'happy_path' },
+      scenario: scenarios[0]!,
+      startedAt: Date.now(),
+    });
+
+    const run = readRun();
+    expect(run).toMatchObject({ phase: 'unknown', request: { orchestrator: 'naive' } });
+    if (run?.phase !== 'unknown') throw new Error('Expected an unknown run');
+    expect(run.message).toContain('does not recover automatically');
+    expect(run.message).not.toContain('Temporal');
+  });
 });

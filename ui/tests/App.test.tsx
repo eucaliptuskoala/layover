@@ -61,10 +61,10 @@ describe('booking sandbox', () => {
     expect(screen.getByText(/Negative hotel price/)).toBeVisible();
   });
 
-  it('keeps unsupported in-memory and worker-crash controls disabled', async () => {
+  it('enables both engines, defaults to Temporal, and keeps worker-crash unavailable', async () => {
     await openCheckout();
 
-    expect(screen.getByRole('radio', { name: /In-memory/ })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: /In-memory/ })).toBeEnabled();
     expect(screen.getByRole('radio', { name: /Worker crash/ })).toBeDisabled();
     expect(screen.getByRole('radio', { name: /Temporal/ })).toBeChecked();
   });
@@ -198,6 +198,7 @@ describe('booking sandbox', () => {
 
     expect(await screen.findByRole('heading', { name: 'No saved booking result' })).toBeVisible();
     expect(gateway.createBooking).not.toHaveBeenCalled();
+    expect(screen.queryByRole('link', { name: /Temporal/ })).not.toBeInTheDocument();
   });
 
   it('restores a pending run as unknown after refresh without resubmitting', async () => {
@@ -283,5 +284,130 @@ describe('booking sandbox', () => {
     await userEvent.click(screen.getByRole('link', { name: 'Back to checkout' }));
     expect(screen.getByRole('heading', { name: /Frankfurt to Amsterdam/ })).toHaveFocus();
     expect(scrollTo).toHaveBeenCalledTimes(scrollCount + 1);
+  });
+
+  it('submits the selected naive engine and shows its labels without a Temporal link', async () => {
+    vi.mocked(gateway.createBooking).mockResolvedValue({
+      ...confirmedResponse,
+      orchestrator: 'naive',
+      temporal_ui_url: null,
+    });
+    const button = await openCheckout();
+    await userEvent.click(screen.getByRole('radio', { name: /In-memory/ }));
+    expect(screen.getByRole('radio', { name: /Temporal/ })).not.toBeChecked();
+    await userEvent.click(button);
+
+    expect(await screen.findByRole('heading', { name: 'Layover confirmed' })).toBeVisible();
+    expect(gateway.createBooking).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        orchestrator: 'naive',
+        scenario: 'happy_path',
+      }),
+    );
+    expect(screen.getByText('In-memory')).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Booking service topology' })).toHaveTextContent(
+      'Engine: In-memory (baseline)',
+    );
+    expect(screen.getByText(/No durable history or automatic restart recovery/)).toBeVisible();
+    expect(screen.queryByRole('link', { name: /Temporal/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Open Temporal for the full history/)).not.toBeInTheDocument();
+  });
+
+  it('keeps engine switching disabled during a naive request and preserves the submitted snapshot', async () => {
+    const pending = deferred<typeof confirmedResponse>();
+    vi.mocked(gateway.createBooking).mockReturnValue(pending.promise);
+    const button = await openCheckout();
+    await userEvent.click(screen.getByRole('radio', { name: /In-memory/ }));
+    await userEvent.click(button);
+
+    expect(screen.getByText('In-memory Saga')).toBeVisible();
+    expect(screen.queryByText(/worker is offline/)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('link', { name: /Back to checkout/ }));
+    expect(screen.getByRole('radio', { name: /In-memory/ })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: /Temporal/ })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: /In-memory/ })).toBeChecked();
+    await userEvent.click(screen.getByRole('radio', { name: /Temporal/ }));
+    expect(gateway.createBooking).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(sessionStorage.getItem('layover.ui.run.v1')!).request.orchestrator).toBe(
+      'naive',
+    );
+
+    const request = vi.mocked(gateway.createBooking).mock.calls[0]![0];
+    await act(async () =>
+      pending.resolve({
+        ...confirmedResponse,
+        booking_id: request.booking_id!,
+        orchestrator: 'naive',
+      }),
+    );
+    await userEvent.click(screen.getByRole('radio', { name: /Temporal/ }));
+    await userEvent.click(screen.getByRole('link', { name: /View last booking/ }));
+    expect(screen.getByText('In-memory')).toBeVisible();
+    // Even an unexpected Temporal URL in a naive response must not create an inspection link.
+    expect(screen.queryByRole('link', { name: /Temporal/ })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    {
+      status: 'COMPENSATED',
+      title: 'Booking rolled back',
+      compensations: ['cancel_hotel', 'cancel_flight'],
+    },
+    { status: 'FAILED', title: 'Booking failed', compensations: ['cancel_hotel'] },
+  ])(
+    'renders naive $status using only reported compensations',
+    async ({ status, title, compensations }) => {
+      vi.mocked(gateway.createBooking).mockResolvedValue({
+        ...confirmedResponse,
+        orchestrator: 'naive',
+        temporal_ui_url: null,
+        status,
+        steps_completed: ['reserve_flight', 'reserve_hotel'],
+        compensations_executed: compensations,
+        error_message:
+          status === 'FAILED'
+            ? 'cancel_flight failed; reconciliation required'
+            : 'Payment declined',
+      });
+      const button = await openCheckout();
+      await userEvent.click(screen.getByRole('radio', { name: /In-memory/ }));
+      await userEvent.click(button);
+
+      expect(await screen.findByRole('heading', { name: title })).toBeVisible();
+      expect(screen.queryByRole('link', { name: /Temporal/ })).not.toBeInTheDocument();
+      const rows = within(
+        screen.getByRole('list', { name: 'Executed compensations' }),
+      ).getAllByRole('listitem');
+      expect(rows).toHaveLength(compensations.length);
+    },
+  );
+
+  it('reports a disconnected naive run without suggesting durable workflow recovery', async () => {
+    vi.mocked(gateway.createBooking).mockRejectedValue(new Error('Network disconnected'));
+    const button = await openCheckout();
+    await userEvent.click(screen.getByRole('radio', { name: /In-memory/ }));
+    await userEvent.click(button);
+
+    expect(await screen.findByRole('heading', { name: 'Booking outcome unknown' })).toBeVisible();
+    expect(
+      screen.getByText(/in-memory Saga may still be running.*does not recover automatically/i),
+    ).toBeVisible();
+    expect(screen.queryByRole('link', { name: /Temporal/ })).not.toBeInTheDocument();
+    expect(gateway.createBooking).toHaveBeenCalledTimes(1);
+  });
+
+  it('restores a refreshed naive run without resubmission or a misleading Temporal link', async () => {
+    saveRun({
+      phase: 'pending',
+      request: { booking_id: 'bk-naive-refresh', orchestrator: 'naive', scenario: 'happy_path' },
+      scenario: scenarios[0]!,
+      startedAt: Date.now(),
+    });
+    renderApp('/processing/bk-naive-refresh');
+
+    expect(await screen.findByRole('heading', { name: 'Booking outcome unknown' })).toBeVisible();
+    expect(screen.getByText(/does not recover automatically/)).toBeVisible();
+    expect(screen.queryByRole('link', { name: /Temporal/ })).not.toBeInTheDocument();
+    expect(gateway.createBooking).not.toHaveBeenCalled();
   });
 });

@@ -8,6 +8,7 @@ import {
   type BookingRequest,
   type BookingResponse,
   type HealthReport,
+  type Orchestrator,
   type Scenario,
 } from './contracts';
 
@@ -53,7 +54,10 @@ export function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'An unexpected error occurred.';
 }
 
-export function getBookingError(error: unknown): { kind: 'unknown' | 'rejected'; message: string } {
+export function getBookingError(
+  error: unknown,
+  orchestrator: Orchestrator = 'temporal',
+): { kind: 'unknown' | 'rejected'; message: string } {
   if (axios.isAxiosError(error) && error.response) {
     const { status, data } = error.response;
     // Only validation/permission rejections are known not to have executed the workflow.
@@ -75,7 +79,11 @@ export function getBookingError(error: unknown): { kind: 'unknown' | 'rejected';
   return {
     kind: 'unknown',
     message:
-      'The gateway did not return a usable result. The workflow may still be running. ' +
-      'Inspect this booking in Temporal before starting another test; it has not been retried.',
+      orchestrator === 'naive'
+        ? 'The gateway did not return a usable result. The in-memory Saga may still be running or may have stopped. ' +
+          'It does not recover automatically after a gateway crash. Service state may need manual reconciliation; ' +
+          'this booking has not been retried.'
+        : 'The gateway did not return a usable result. The workflow may still be running. ' +
+          'Inspect this booking in Temporal before starting another test; it has not been retried.',
   };
 }

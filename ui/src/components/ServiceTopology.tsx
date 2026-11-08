@@ -1,4 +1,4 @@
-import type { BookingResponse, HealthReport } from '../api/contracts';
+import type { BookingResponse, HealthReport, Orchestrator } from '../api/contracts';
 import { getServiceStates, type ServiceState } from '../lib/booking';
 import { formatDuration, getServiceAddress } from '../lib/format';
 import { Icon } from './Icon';
@@ -40,18 +40,23 @@ export function ServiceTopology({
   isPending,
   elapsed,
   health,
+  orchestrator,
 }: {
   response: BookingResponse | null;
   isPending: boolean;
   elapsed: number | null;
   health: HealthReport | null;
+  orchestrator: Orchestrator;
 }) {
   const states = getServiceStates(response);
   return (
     <section className="topology-card card" aria-label="Booking service topology">
       <div className="topology-header">
         <h2>
-          Service topology <span>3 services · 1 orchestrator</span>
+          Service topology{' '}
+          <span>
+            Engine: {orchestrator === 'naive' ? 'In-memory (baseline)' : 'Temporal (durable)'}
+          </span>
         </h2>
         <span className="text-[11px] text-muted">
           <b className="font-mono text-ink">{formatDuration(elapsed)}</b> browser request
@@ -95,7 +100,7 @@ export function ServiceTopology({
       </div>
       <p className="topology-note">
         {isPending
-          ? 'The gateway waits for the full workflow. Individual activity progress is not exposed.'
+          ? 'The gateway waits for the full Saga. Individual action progress is not exposed.'
           : 'States are derived only from the actions reported by the gateway, not direct database reads.'}
       </p>
     </section>

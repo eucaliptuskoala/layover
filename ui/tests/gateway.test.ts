@@ -82,4 +82,13 @@ describe('gateway client', () => {
       message: 'Request rejected (HTTP 422). Invalid orchestrator',
     });
   });
+
+  it('uses naive-specific guidance for uncertain transport outcomes', () => {
+    const result = getBookingError(new AxiosError('timeout', 'ECONNABORTED'), 'naive');
+
+    expect(result.kind).toBe('unknown');
+    expect(result.message).toContain('does not recover automatically');
+    expect(result.message).toContain('not been retried');
+    expect(result.message).not.toContain('Temporal');
+  });
 });

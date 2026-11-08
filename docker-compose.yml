@@ -90,8 +90,8 @@ services:
 
   gateway:
     build:
-      context: ./gateway
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: gateway/Dockerfile
     container_name: layover-gateway
     ports:
       - "8000:8000"

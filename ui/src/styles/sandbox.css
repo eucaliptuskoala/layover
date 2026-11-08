@@ -160,6 +160,7 @@
     opacity: 0.55;
   }
   .unavailable input,
+  .engine-option input:disabled,
   .scenario-option input:disabled {
     cursor: not-allowed;
   }

@@ -1,4 +1,4 @@
-import type { BookingRequest, BookingResponse, Scenario } from '../api/contracts';
+import type { BookingRequest, BookingResponse, Orchestrator, Scenario } from '../api/contracts';
 
 export type BookingRun = {
   request: BookingRequest & { booking_id: string };
@@ -82,7 +82,7 @@ export function getOutcome(response: BookingResponse): {
       tone: 'coral',
       icon: '↺',
       note: outstanding
-        ? 'The gateway reports COMPENSATED, but not all completed actions have a reported rollback. Inspect the workflow.'
+        ? 'The gateway reports COMPENSATED, but not all completed actions have a reported rollback. Review the booking and reconcile service state.'
         : 'The booking did not complete. Reported compensations are listed below in execution order.',
     };
   }
@@ -115,7 +115,12 @@ function safeHttpUrl(value: string): string | null {
   }
 }
 
-export function getTemporalUrl(bookingId: string, suppliedUrl?: string | null): string | null {
+export function getTemporalUrl(
+  bookingId: string,
+  suppliedUrl?: string | null,
+  orchestrator?: Orchestrator,
+): string | null {
+  if (orchestrator !== 'temporal' || !bookingId) return null;
   if (suppliedUrl != null) return safeHttpUrl(suppliedUrl);
   const base = safeHttpUrl(import.meta.env.VITE_TEMPORAL_UI_URL || 'http://localhost:8233');
   if (!base) return null;

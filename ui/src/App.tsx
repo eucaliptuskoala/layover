@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Navigate, Route, Routes, useNavigate } from 'react-router';
 
-import type { Scenario, ScenarioKey } from './api/contracts';
+import type { Orchestrator, Scenario, ScenarioKey } from './api/contracts';
 import { getHealth, getScenarios } from './api/gateway';
 import { Toast } from './components/Toast';
 import { useBooking } from './hooks/useBooking';
@@ -17,6 +17,9 @@ export default function App() {
   const scenarios = useResource(getScenarios);
   const health = useResource(getHealth);
   const { run, startBooking } = useBooking();
+  const [selectedOrchestrator, setSelectedOrchestrator] = useState<Orchestrator>(
+    run?.request.orchestrator ?? 'temporal',
+  );
   const { message, notify } = useToast();
   const navigate = useNavigate();
   useRouteFocus();
@@ -27,7 +30,7 @@ export default function App() {
   }
 
   function submit(scenario: Scenario) {
-    const bookingId = startBooking(scenario);
+    const bookingId = startBooking(scenario, selectedOrchestrator);
     if (bookingId) void navigate(`/processing/${encodeURIComponent(bookingId)}`);
   }
 
@@ -41,6 +44,8 @@ export default function App() {
               scenarios={scenarios}
               selectedKey={selectedKey}
               onSelect={selectScenario}
+              selectedOrchestrator={selectedOrchestrator}
+              onSelectOrchestrator={setSelectedOrchestrator}
               health={health}
               run={run}
               onSubmit={submit}

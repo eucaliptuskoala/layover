@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 
-import { isScenarioKey, type Scenario } from '../api/contracts';
+import { isScenarioKey, type Orchestrator, type Scenario } from '../api/contracts';
 import { createBooking, getBookingError } from '../api/gateway';
 import type { BookingRun } from '../lib/booking';
 import { readRun, saveRun } from '../lib/storage';
@@ -19,7 +19,7 @@ export function useBooking() {
     setRun(next);
   }
 
-  function startBooking(scenario: Scenario): string | null {
+  function startBooking(scenario: Scenario, orchestrator: Orchestrator): string | null {
     if (isSubmitting.current || !isScenarioKey(scenario.key)) return null;
 
     const bookingId = createBookingId();
@@ -29,7 +29,7 @@ export function useBooking() {
       scenario: { ...scenario },
       request: {
         booking_id: bookingId,
-        orchestrator: 'temporal',
+        orchestrator,
         scenario: scenario.key,
         customer_id: scenario.customer_id,
         flight_number: scenario.flight_number,
@@ -53,7 +53,7 @@ export function useBooking() {
         });
       })
       .catch((error: unknown) => {
-        const { kind, message } = getBookingError(error);
+        const { kind, message } = getBookingError(error, next.request.orchestrator);
         publish({
           ...next,
           phase: kind,

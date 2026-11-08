@@ -9,6 +9,7 @@ dependencies = [
     "pydantic>=2.8.0",
     "fastapi>=0.162.0",
     "uvicorn>=0.54.0",
+    "layover-naive",
 ]
 
 [dependency-groups]
@@ -21,3 +22,7 @@ dev = [
 pythonpath = ["."]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = ["integration: opt-in isolated live services and coordinator process-crash tests"]
+
+[tool.uv.sources]
+layover-naive = { path = "../orchestrators/naive", editable = true }

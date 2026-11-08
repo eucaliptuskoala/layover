@@ -3,6 +3,7 @@ import { useState } from 'react';
 import {
   isScenarioKey,
   type HealthReport,
+  type Orchestrator,
   type Scenario,
   type ScenarioKey,
 } from '../api/contracts';
@@ -20,6 +21,8 @@ export function SandboxPanel({
   scenarios,
   selectedKey,
   onSelect,
+  selectedOrchestrator,
+  onSelectOrchestrator,
   health,
   isOpen,
   onToggle,
@@ -28,6 +31,8 @@ export function SandboxPanel({
   scenarios: Scenario[];
   selectedKey: ScenarioKey;
   onSelect: (key: ScenarioKey) => void;
+  selectedOrchestrator: Orchestrator;
+  onSelectOrchestrator: (orchestrator: Orchestrator) => void;
   health: Resource<HealthReport>;
   isOpen: boolean;
   onToggle: () => void;
@@ -141,14 +146,32 @@ export function SandboxPanel({
         <fieldset className="sandbox-group">
           <legend className="eyebrow mb-2">Orchestrator</legend>
           <div className="engine-options">
-            <label className="engine-option unavailable">
-              <input type="radio" name="orchestrator" value="naive" disabled />
+            <label
+              className={`engine-option ${selectedOrchestrator === 'naive' ? 'selected' : ''}`}
+            >
+              <input
+                type="radio"
+                name="orchestrator"
+                value="naive"
+                checked={selectedOrchestrator === 'naive'}
+                disabled={isDisabled}
+                onChange={() => onSelectOrchestrator('naive')}
+              />
               <span>
-                In-memory <em>unavailable</em>
+                In-memory <em>baseline</em>
               </span>
             </label>
-            <label className="engine-option selected">
-              <input type="radio" name="orchestrator" value="temporal" checked readOnly />
+            <label
+              className={`engine-option ${selectedOrchestrator === 'temporal' ? 'selected' : ''}`}
+            >
+              <input
+                type="radio"
+                name="orchestrator"
+                value="temporal"
+                checked={selectedOrchestrator === 'temporal'}
+                disabled={isDisabled}
+                onChange={() => onSelectOrchestrator('temporal')}
+              />
               <span>
                 Temporal <em>durable</em>
               </span>
@@ -197,7 +220,10 @@ export function SandboxPanel({
           {selected?.description || 'Choose a gateway scenario to run a booking experiment.'}
         </p>
         <p className="sandbox-note text-[10px]">
-          In-memory execution and crash injection are not available in the gateway yet.
+          {selectedOrchestrator === 'naive'
+            ? 'In-memory: single HTTP attempts and volatile rollback state. A gateway crash has no automatic recovery.'
+            : 'Temporal: durable workflow history and activity retries while the server remains available.'}{' '}
+          Crash injection is not available from this UI.
         </p>
       </div>
     </aside>

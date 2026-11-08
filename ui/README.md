@@ -11,7 +11,13 @@ Fonts are self-hosted using Fontsource; no Google Fonts connection is required.
 Use Node **22.22.2+** on the 22.x line, **24.15.0+** on the 24.x line, or **26+**, and npm.
 If you use nvm, `nvm use` reads the provided `.nvmrc`.
 
-From the repository root, start the gateway in one terminal:
+From the repository root, choose the full-stack Compose setup or a local gateway. For Compose:
+
+```sh
+docker compose up -d --build
+```
+
+For a local Python gateway instead:
 
 ```sh
 uv run --directory gateway python main.py
@@ -30,11 +36,12 @@ the `/api` prefix. The gateway does not need to serve frontend files.
 
 ### Run actual booking workflows
 
-Start the three microservices and Temporal before expecting successful bookings. From the
-repository root:
+Full-stack Compose includes the three microservices, Temporal dev server, worker, and gateway.
+Do not start additional local processes on the same ports. If you prefer a local gateway/worker,
+start only the microservices through Compose:
 
 ```sh
-docker compose up -d --build
+docker compose up -d --build flight-service hotel-service payment-service
 ```
 
 In separate terminals:
@@ -47,10 +54,17 @@ temporal server start-dev --namespace layover
 uv run --directory orchestrators/temporal python worker.py
 ```
 
+**In-memory** bookings require the microservices and gateway only. Temporal needs the server
+and worker shown above. Both radio options are enabled; **Worker crash** remains disabled.
+
 The default is **Temporal + Happy Path**. Choose Payment decline or Hotel rejection to run the
 gateway's fault scenarios. Changing a scenario changes the actual flight, hotel, prices, and
 total submitted to the gateway. The negative hotel price is an intentional HTTP 422 fault
 fixture and is not silently corrected by the frontend.
+
+Changing the engine affects the next explicitly submitted booking. While a request is pending,
+both engine controls are disabled. Saved runs keep their original engine across navigation and
+refresh, independently of the current checkout selection.
 
 The payment service has persistent test account balances: repeated successful bookings can
 exhaust `user_1`'s balance. The displayed **$1,000 demo seed** is the initial fixture balance,
@@ -70,8 +84,10 @@ inside `ui/` and restart Vite.
 | `VITE_TEMPORAL_UI_URL`    | `http://localhost:8233` | Inspection URL before a result is available.                                                          |
 | `VITE_TEMPORAL_NAMESPACE` | `layover`               | Namespace used for the pre-result inspection link.                                                    |
 
-When the gateway returns `temporal_ui_url`, that link takes precedence. Only HTTP(S) URLs
-without embedded credentials are allowed.
+For a known Temporal run, the gateway's `temporal_ui_url` takes precedence. Only HTTP(S) URLs
+without embedded credentials are allowed. Naive runs never show a Temporal link, even if an
+unexpected URL appears in a response. Opening a result URL without saved engine context does
+not infer a workflow link from the booking ID alone.
 
 `VITE_` variables are public, embedded in the build, and **must not contain secrets**. Cross-origin
 requests do not send credentials. This app is a local academic sandbox, not a production payment
@@ -90,21 +106,28 @@ application; the gateway's existing permissive CORS and lack of authentication a
 - `CONFIRMED`, `COMPENSATED`, and `FAILED` are business outcomes, even when HTTP status is 200.
   Unknown statuses are displayed without assuming success.
 - `COMPENSATED` does not guarantee every rollback succeeded. The UI flags completed actions
-  whose matching compensation was not reported.
+  whose matching compensation was not reported. Naive reports `FAILED` for rollback failure or
+  uncertain service outcomes; the existing Temporal workflow can still return `COMPENSATED`
+  after a failed rollback. The services reject cancellation after reservation confirmation.
 - There is **no live activity stream, booking lookup, or cancellation endpoint**. While pending,
   the UI shows an indeterminate wait, not invented progress or per-step timings. Displayed request
   duration is measured in the browser, not the workflow's execution duration.
-- Timeouts, disconnections, HTTP 5xx, and malformed booking responses have **unknown outcomes**:
-  the Temporal workflow may still be running. The app never automatically retries a booking.
+- Timeouts, disconnections, HTTP 5xx, and malformed booking responses have **unknown outcomes**.
+  Temporal workflows may still run. A naive Saga may still run or may have stopped; it has no
+  automatic recovery after a gateway crash, and service state may need manual reconciliation.
+  The app never automatically retries a booking.
   Known HTTP validation/permission rejections are shown separately.
-- Booking IDs are generated before submission so in-flight/unknown runs can be inspected in
-  Temporal. Navigation within the app keeps the request alive. Refreshing a pending run restores
-  an unknown outcome without resubmitting it.
+- Booking IDs are generated before submission to correlate in-flight/unknown runs. Known
+  Temporal runs can be inspected in Temporal. Navigation within the app keeps the request alive.
+  Refreshing a pending run restores an unknown outcome without resubmitting it.
 - The latest run is kept in **sessionStorage** for the current tab; scenario preference is kept in
   **localStorage**. Downloads are JSON experiment reports with the actual request/result, not
   fabricated tickets, receipts, or payment confirmations.
-- **In-memory** and **Worker crash** controls are visible but disabled: those gateway features
-  are not implemented. No direct calls are made to service databases or individual microservices.
+- **In-memory** uses single-attempt HTTP actions and a volatile compensation stack in the
+  gateway process. Topology labels, execution notes, and recovery guidance reflect the engine
+  recorded on the submitted run. **Worker crash** remains disabled: there is no browser-accessible
+  crash endpoint. The [isolated crash harness](../gateway/tests/integration/README.md) runs outside
+  the UI and only kills test-owned processes. The frontend calls only the gateway.
 
 ## Checks
 

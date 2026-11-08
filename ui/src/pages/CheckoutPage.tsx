@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 
-import type { HealthReport, Scenario, ScenarioKey } from '../api/contracts';
+import type { HealthReport, Orchestrator, Scenario, ScenarioKey } from '../api/contracts';
 import { Icon } from '../components/Icon';
 import { PriceSummary } from '../components/PriceSummary';
 import { SandboxPanel } from '../components/SandboxPanel';
@@ -13,6 +13,8 @@ export function CheckoutPage({
   scenarios,
   selectedKey,
   onSelect,
+  selectedOrchestrator,
+  onSelectOrchestrator,
   health,
   run,
   onSubmit,
@@ -21,6 +23,8 @@ export function CheckoutPage({
   scenarios: Resource<Scenario[]>;
   selectedKey: ScenarioKey;
   onSelect: (key: ScenarioKey) => void;
+  selectedOrchestrator: Orchestrator;
+  onSelectOrchestrator: (orchestrator: Orchestrator) => void;
   health: Resource<HealthReport>;
   run: BookingRun | null;
   onSubmit: (scenario: Scenario) => void;
@@ -86,8 +90,9 @@ export function CheckoutPage({
                       setAcknowledgedRun(event.target.checked ? run.request.booking_id : null);
                     }}
                   />
-                  I checked the previous workflow and understand that another test creates a new
-                  booking.
+                  {run.request.orchestrator === 'temporal'
+                    ? 'I checked the previous workflow and understand that another test creates a new booking.'
+                    : 'I reviewed the unknown booking and understand that service state may need reconciliation; another test creates a new booking.'}
                 </label>
               )}
             </div>
@@ -138,6 +143,8 @@ export function CheckoutPage({
         scenarios={scenarios.data || []}
         selectedKey={(selected?.key as ScenarioKey) || selectedKey}
         onSelect={onSelect}
+        selectedOrchestrator={selectedOrchestrator}
+        onSelectOrchestrator={onSelectOrchestrator}
         health={health}
         isOpen={isSandboxOpen}
         onToggle={() => setSandboxOpen((previous) => !previous)}

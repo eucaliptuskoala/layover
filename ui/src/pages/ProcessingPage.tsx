@@ -29,7 +29,12 @@ export function ProcessingPage({
       : activeRun?.phase === 'rejected'
         ? 'Booking request rejected'
         : 'Booking outcome unknown';
-  const temporalUrl = getTemporalUrl(bookingId || '', response?.temporal_ui_url);
+  const isNaive = activeRun?.request.orchestrator === 'naive';
+  const temporalUrl = getTemporalUrl(
+    bookingId || '',
+    response?.temporal_ui_url,
+    activeRun?.request.orchestrator,
+  );
   const displayedId = response?.booking_id || bookingId;
 
   if (!activeRun) {
@@ -43,17 +48,10 @@ export function ProcessingPage({
             this URL does not submit or repeat a booking. The gateway has no booking lookup
             endpoint.
           </p>
-          {temporalUrl && (
-            <a
-              className="btn btn-primary mt-5"
-              href={temporalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Icon name="external" />
-              Inspect booking in Temporal
-            </a>
-          )}
+          <p className="mt-3 text-sm text-muted leading-relaxed">
+            The execution engine is unknown without saved context. No workflow inspection link is
+            assumed from the booking ID alone.
+          </p>
           <Link className="btn btn-ghost mt-2" to="/checkout">
             Back to checkout
           </Link>
@@ -83,8 +81,8 @@ export function ProcessingPage({
           <div className="engine-badge">
             <span className="status-dot" />
             <span>
-              <b>Temporal</b>
-              <small>durable saga</small>
+              <b>{isNaive ? 'In-memory' : 'Temporal'}</b>
+              <small>{isNaive ? 'baseline saga' : 'durable saga'}</small>
             </span>
           </div>
         </div>
@@ -123,6 +121,7 @@ export function ProcessingPage({
           isPending={activeRun.phase === 'pending'}
           elapsed={elapsed}
           health={health}
+          orchestrator={activeRun.request.orchestrator}
         />
         <div className="processing-grid">
           <ExecutionSummary run={activeRun} elapsed={elapsed} notify={notify} />
@@ -151,7 +150,9 @@ export function ProcessingPage({
               </a>
             ) : (
               <p className="text-xs text-muted py-3">
-                No safe Temporal workflow link is available.
+                {isNaive
+                  ? 'No durable history or automatic restart recovery is available for this in-memory run.'
+                  : 'No safe Temporal workflow link is available.'}
               </p>
             )}
             <Link className="developer-action" to="/checkout">
