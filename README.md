@@ -24,66 +24,55 @@ The project consists of three independent microservices following the **database
 
 ```text
                   +-----------------------------------+
-                  |      React Frontend (Vite)        |
-                  |  - Booking Form                   |
+                  |      React Frontend (Vite :5173)  |
+                  |  - Booking Sandbox                |
                   |  - Engine & Scenario Selection    |
-                  |  - Reported Booking Outcomes      |
+                  |  - Real-time State Topology       |
                   +-----------------+-----------------+
                                     |
-                          [ API Gateway :8000 ]
-                       (Strategy dispatch by engine)
+                           [ API Gateway :8000 ]
+                     (Stateless Strategy Dispatcher)
                                     |
                     +---------------+---------------+
-                    |                               |
+                    | (HTTP :8004)                  | (gRPC :7233)
                     v                               v
-         [ In-Memory Saga ]               [ Temporal Workflow ]
-       (Ad-Hoc LIFO Rollbacks)            (Durable Saga Runner)
+         [ Naive Orchestrator ]           [ Temporal Cluster ]
+         (Standalone microservice)        (Durable History Engine)
+         (In-Memory LIFO Stack)                     |
+                    |                     [ Temporal Worker ]
+                    |                     (Workflow Activities)
                     |                               |
                     +---------------+---------------+
                                     |
-           +------------------------+------------------------+
-           |                        |                        |
-           v                        v                        v
-  +------------------+     +------------------+     +------------------+
-  |  Flight Service  |     |  Hotel Service   |     | Payment Service  |
-  |     (:8001)      |     |     (:8002)      |     |     (:8003)      |
-  |    flight.db     |     |     hotel.db     |     |    payment.db    |
-  +------------------+     +------------------+     +------------------+
+            +------------------------+------------------------+
+            |                        |                        |
+            v                        v                        v
+   +------------------+     +------------------+     +------------------+
+   |  Flight Service  |     |  Hotel Service   |     | Payment Service  |
+   |     (:8001)      |     |     (:8002)      |     |     (:8003)      |
+   |    flight.db     |     |     hotel.db     |     |    payment.db    |
+   +------------------+     +------------------+     +------------------+
 ```
 
-### Services
+### Services & Components
 
-| Service             | Port   | Database              | Endpoints                                                                          |
-| :------------------ | :----- | :-------------------- | :--------------------------------------------------------------------------------- |
-| **Flight Service**  | `8001` | `flight.db` (SQLite)  | `POST /reserve`, `POST /confirm`, `POST /cancel`, `GET /reservations/{booking_id}` |
-| **Hotel Service**   | `8002` | `hotel.db` (SQLite)   | `POST /reserve`, `POST /confirm`, `POST /cancel`, `GET /reservations/{booking_id}` |
-| **Payment Service** | `8003` | `payment.db` (SQLite) | `POST /charge`, `POST /refund`                                                     |
+| Component | Port | Persistence | Primary Endpoints / Role |
+| :--- | :--- | :--- | :--- |
+| **API Gateway** | `8000` | Stateless | `POST /api/bookings`, `GET /health`, `GET /scenarios` |
+| **Flight Service** | `8001` | `flight.db` (SQLite) | `POST /reserve`, `POST /confirm`, `POST /cancel`, `GET /health` |
+| **Hotel Service** | `8002` | `hotel.db` (SQLite) | `POST /reserve`, `POST /confirm`, `POST /cancel`, `GET /health` |
+| **Payment Service** | `8003` | `payment.db` (SQLite) | `POST /charge`, `POST /refund`, `GET /health` |
+| **Naive Orchestrator** | `8004` | In-Memory RAM | `POST /book`, `GET /health` |
+| **Temporal Cluster** | `7233`<br/>`8233` | SQLite (Dev) | gRPC Engine (`:7233`) and Web UI Dashboard (`:8233`) |
+| **Temporal Worker** | None | Event Log | Consumes workflows & activities from `booking-task-queue` |
+| **React UI Dashboard** | `5173` | Local Storage | Interactive developer sandbox & topology visualizer |
 
-### Engine behavior
+### Engine Behavior
 
-`POST /api/bookings` accepts `orchestrator: 'temporal' | 'naive'`. The gateway resolves the
-scenario once and selects `TemporalSagaStrategy` or `NaiveSagaStrategy` from `STRATEGIES`.
-Both execute `reserve_flight → reserve_hotel → charge_payment → confirm_flight → confirm_hotel`.
+The API Gateway (`POST /api/bookings`) accepts `orchestrator: 'temporal' | 'naive'`. The gateway selects `TemporalSagaStrategy` or `NaiveSagaStrategy` from `STRATEGIES`:
 
-- **Naive:** one HTTP attempt per action, with a request-local LIFO compensation stack. The
-  API coordinator runs in the gateway process. After an acknowledged charge, rollback order is
-  `refund_payment → cancel_hotel → cancel_flight`. A payment decline only cancels hotel then flight.
-  The coordinator attempts remaining rollbacks even when one fails. It has no persistent queue,
-  booking registry, restart recovery, distributed lock, or direct database access.
-- **Temporal:** the existing workflow keeps three forward activity attempts and five compensation
-  attempts for retryable failures. Worker crashes can trigger replay and activity retries while
-  Temporal remains available. Existing HTTP-rejection classification and workflow behavior are unchanged.
-
-Naive reports `CONFIRMED` after all five actions, `COMPENSATED` after complete rollback of
-acknowledged work, and `FAILED` for incomplete rollback or uncertain HTTP outcomes. It records
-only acknowledged successful actions. A lost response can hide a committed service action;
-`FAILED` therefore does not prove that no state changed.
-
-Both reservation services reject cancellation after `CONFIRMED`. A failure during confirmation
-can leave partial state. Temporal currently reports `COMPENSATED` even if a compensation fails;
-the UI flags completed actions without matching reported rollbacks. Compare service state, not
-just the top-level outcome. The current Temporal dev server stores history in memory, so keep
-it alive during worker-crash experiments; server-restart persistence is outside this baseline.
+- **Naive (`layover-naive` on port `:8004`):** An autonomous microservice executing steps sequentially (`reserve_flight → reserve_hotel → charge_payment → confirm_flight → confirm_hotel`). It registers compensations in an in-memory LIFO stack in process RAM. If an error occurs (such as HTTP 400 Insufficient Funds), it executes compensations in reverse order (`cancel_hotel → cancel_flight`). However, if the `layover-naive` container is terminated mid-flight (`docker kill layover-naive`), the compensation stack in RAM is destroyed, leaving orphaned holds in SQLite.
+- **Temporal (`layover-worker` via `layover-temporal`):** Orchestrated execution backed by Temporal's append-only event history. Each step and compensation is an isolated activity with exponential retries. If the worker process is killed mid-booking, the pending workflow is preserved in Temporal Server and automatically resumes upon worker restart.
 
 ---
 
@@ -160,11 +149,11 @@ docker compose logs -f
 docker compose down
 ```
 
-The gateway build uses the repository root as its context so it can install the sibling
-`orchestrators/naive` package. It copies only gateway and naive code. After code changes:
+All services use strictly scoped build contexts and cached `uv` dependency layers. To rebuild any specific service after code changes:
 
 ```bash
 docker compose up -d --build gateway
+docker compose up -d --build naive-orchestrator
 ```
 
 ### 5. Alternative: Local Python Processes
@@ -241,23 +230,25 @@ layover/
 │   └── payment/               # Port 8003 (payment.db)
 │
 ├── orchestrators/             # Workflow Coordinators
-│   ├── naive/                 # Installable layover_naive package, volatile coordinator & tests
+│   ├── naive/                 # Standalone In-Memory Saga Orchestrator (:8004, volatile RAM stack)
 │   └── temporal/              # Temporal Saga Orchestrator (Workflows, Activities, Worker)
 │
-├── gateway/                   # Application Service Layer (Contracts, Scenarios, Health)
+├── gateway/                   # Stateless API Gateway & Facade (:8000)
 │   ├── models.py              # Unified BookingRequest & BookingResponse schemas
 │   ├── scenarios.py           # Predefined test scenario profiles
 │   ├── health.py              # On-demand healthcheck engine
 │   ├── dispatcher.py          # Strategy interface, concrete engines, and dispatch context
-│   └── tests/integration/     # Isolated live-stack and deterministic coordinator-crash tests
+│   └── tests/                 # Unit & dispatcher mocks (isolated live tests in integration/)
 │
 ├── clients/                   # Consumer Adapters
 │   └── cli.py                 # Command-line interface with pre-flight & scenario flags
 │
-├── ui/                        # React booking UI; engine selection and saved result summaries
+├── ui/                        # React 19 UI Dashboard (:5173); interactive sandbox & state visualizer
 │
-├── docs/                      # Personal Development Plan & Portfolio Evidences
+├── docs/                      # Personal Development Plan, Cycle Reports & Portfolio Evidences
 │   ├── pdp.md                 # 5-Cycle Research & Learning Outcomes plan
+│   ├── cycle-1.md             # Cycle 1 Research & Problem Scoping report
+│   ├── cycle-4.md             # Cycle 4 Baseline In-Memory & UI Dashboard report
 │   └── evidences/             # Portfolio evidence documents (LO1, LO2, LO3)
 │
 ├── docker-compose.yml         # Container orchestration with healthchecks & volumes

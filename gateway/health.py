@@ -12,6 +12,7 @@ from models import ServiceHealth, SystemHealthReport
 FLIGHT_SERVICE_URL = os.getenv('FLIGHT_SERVICE_URL', 'http://localhost:8001')
 HOTEL_SERVICE_URL = os.getenv('HOTEL_SERVICE_URL', 'http://localhost:8002')
 PAYMENT_SERVICE_URL = os.getenv('PAYMENT_SERVICE_URL', 'http://localhost:8003')
+NAIVE_ORCHESTRATOR_URL = os.getenv('NAIVE_ORCHESTRATOR_URL', 'http://localhost:8004')
 TEMPORAL_HOST = os.getenv('TEMPORAL_HOST', 'localhost:7233')
 
 
@@ -71,9 +72,10 @@ async def check_all_services() -> SystemHealthReport:
     flight_res = await check_http_service('Flight Service', FLIGHT_SERVICE_URL)
     hotel_res = await check_http_service('Hotel Service', HOTEL_SERVICE_URL)
     payment_res = await check_http_service('Payment Service', PAYMENT_SERVICE_URL)
+    naive_res = await check_http_service('Naive Orchestrator', NAIVE_ORCHESTRATOR_URL)
     temporal_res = await check_temporal_service()
 
-    services = [flight_res, hotel_res, payment_res, temporal_res]
+    services = [flight_res, hotel_res, payment_res, naive_res, temporal_res]
     is_healthy = all(s.status == 'UP' for s in services)
 
     return SystemHealthReport(

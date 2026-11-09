@@ -139,7 +139,6 @@ source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
-    { name = "layover-naive" },
     { name = "pydantic" },
     { name = "temporalio" },
     { name = "uvicorn" },
@@ -155,31 +154,9 @@ dev = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.162.0" },
     { name = "httpx", specifier = ">=0.27.0" },
-    { name = "layover-naive", editable = "../orchestrators/naive" },
     { name = "pydantic", specifier = ">=2.8.0" },
     { name = "temporalio", specifier = ">=1.7.0" },
     { name = "uvicorn", specifier = ">=0.54.0" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pytest", specifier = ">=8.0.0" },
-    { name = "pytest-asyncio", specifier = ">=0.24.0" },
-]
-
-[[package]]
-name = "layover-naive"
-version = "0.1.0"
-source = { editable = "../orchestrators/naive" }
-dependencies = [
-    { name = "httpx" },
-    { name = "pydantic" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "httpx", specifier = ">=0.27.0" },
-    { name = "pydantic", specifier = ">=2.8.0" },
 ]
 
 [package.metadata.requires-dev]

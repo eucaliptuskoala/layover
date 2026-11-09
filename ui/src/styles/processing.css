@@ -218,37 +218,179 @@
     width: 5px;
     height: 5px;
   }
-  .service-node[data-tone='mint'] {
-    background: linear-gradient(180deg, #fbfefc, #f2fbf5);
+  .service-node[data-state='ok'] {
     border-color: #bce3c9;
+    background: linear-gradient(180deg, #fbfefc, #f2fbf5);
   }
-  .service-node[data-tone='mint'] .node-icon {
+  .service-node[data-state='ok'] .node-icon {
     background: var(--color-emerald-50);
     border-color: #b7e8c7;
     color: var(--color-emerald-800);
   }
-  .service-node[data-tone='mint'] .node-status {
+  .service-node[data-state='ok'] .node-status {
     color: var(--color-emerald-800);
   }
-  .service-node[data-tone='coral'] {
-    background: linear-gradient(180deg, #fffcfd, #fff3f5);
-    border-color: #f6c6d0;
+
+  .service-node[data-state='skip'] {
+    border-style: dashed;
+    border-color: var(--color-line-strong);
+    background: var(--color-well);
+    opacity: 0.78;
   }
-  .service-node[data-tone='coral'] .node-icon {
+  .service-node[data-state='skip'] .node-icon {
+    background: var(--color-well);
+    border-color: var(--color-line-soft);
+    color: var(--color-muted);
+  }
+  .service-node[data-state='skip'] .node-status {
+    color: var(--color-muted);
+  }
+
+  .service-node[data-state='idle'] {
+    border-color: var(--color-line);
+    background: linear-gradient(180deg, white, #fcfdfc);
+  }
+  .service-node[data-state='idle'] .node-icon {
+    background: var(--color-well);
+    border-color: var(--color-line-soft);
+    color: var(--color-muted);
+  }
+  .service-node[data-state='idle'] .node-status {
+    color: var(--color-faint);
+  }
+  .topology-link {
+    position: relative;
+    flex: 0 0 54px;
+    display: grid;
+    place-items: center;
+    align-self: center;
+    height: 44px;
+    color: var(--color-line-strong);
+    margin: 0 2px;
+  }
+  .topology-link-line {
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    top: 50%;
+    height: 1px;
+    transform: translateY(-50%);
+    background: repeating-linear-gradient(90deg, #d8e3db 0 3px, transparent 3px 7px);
+  }
+  .topology-link-dot {
+    position: absolute;
+    left: 2%;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-emerald-600);
+    opacity: 0;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.16);
+    pointer-events: none;
+  }
+  .topology-link.is-live .topology-link-line {
+    background: repeating-linear-gradient(90deg, var(--color-emerald-600) 0 4px, transparent 4px 9px);
+    animation: flowX 0.75s linear infinite;
+  }
+  .topology-link.is-live .topology-link-dot {
+    opacity: 1;
+    animation: travelX 1.35s ease-in-out infinite;
+  }
+  .topology-link.is-reverse .topology-link-line {
+    background: repeating-linear-gradient(90deg, var(--color-rose-600) 0 4px, transparent 4px 9px);
+    animation: flowX 0.6s linear infinite reverse;
+  }
+  .topology-link.is-reverse .topology-link-dot {
+    opacity: 1;
+    background: var(--color-rose-600);
+    box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.16);
+    animation: travelX 1.05s ease-in-out infinite reverse;
+  }
+
+  .service-node {
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+  }
+  .service-node::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(105deg, transparent 18%, rgba(21, 128, 61, 0.08) 48%, transparent 78%);
+    background-size: 220% 100%;
+    transition: opacity 0.2s ease;
+  }
+  .service-node[data-state='running'] {
+    border-color: #8fd3a8;
+    background: linear-gradient(180deg, #ffffff, #f4fcf7);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.10), 0 8px 20px -12px rgba(21, 128, 61, 0.35);
+    transform: translateY(-1px);
+  }
+  .service-node[data-state='running'] .node-icon {
+    background: var(--color-emerald-50);
+    border-color: #b7e8c7;
+    color: var(--color-emerald-700);
+  }
+  .service-node[data-state='running'] .node-status {
+    color: var(--color-emerald-700);
+  }
+  .service-node[data-state='running'] .status-dot {
+    animation: badgePulse 1.1s ease-in-out infinite;
+  }
+  .service-node[data-state='running']::after {
+    opacity: 1;
+    animation: shimmer 1.25s linear infinite;
+  }
+  .service-node[data-state='err'] {
+    border-color: #f6c6d0;
+    background: linear-gradient(180deg, #fffcfd, #fff3f5);
+    box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.08);
+    animation: nodeShake 0.35s ease;
+  }
+  .service-node[data-state='err'] .node-icon {
     background: #ffe4e6;
     border-color: #f8c6d0;
     color: var(--color-rose-700);
   }
-  .service-node[data-tone='coral'] .node-status {
+  .service-node[data-state='err'] .node-status {
     color: var(--color-rose-700);
   }
-  .topology-connector {
-    flex: 0 0 44px;
-    height: 1px;
-    align-self: center;
-    margin: 0 3px;
-    background: repeating-linear-gradient(90deg, #d8e3db 0 3px, transparent 3px 7px);
+  .service-node[data-state='unwinding'] {
+    border-color: #f3cad2;
+    background: linear-gradient(180deg, #fffcfd, #fff4f6);
+    box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.09);
+    animation: nodeShake 0.35s ease;
   }
+  .service-node[data-state='unwinding'] .node-icon {
+    background: #ffe4e6;
+    border-color: #f8c6d0;
+    color: var(--color-rose-700);
+  }
+  .service-node[data-state='unwinding'] .node-status {
+    color: var(--color-rose-700);
+  }
+  .service-node[data-state='unwinding'] .status-dot {
+    animation: badgePulse 1.1s ease-in-out infinite;
+  }
+  .service-node[data-state='cancel'] {
+    border-color: #f3cad2;
+    background: linear-gradient(180deg, #fffcfd, #fff4f6);
+  }
+  .service-node[data-state='cancel'] .node-icon {
+    background: #ffe4e6;
+    border-color: #f8c6d0;
+    color: var(--color-rose-700);
+    transform: rotate(-6deg);
+  }
+  .service-node[data-state='cancel'] .node-status {
+    color: var(--color-rose-700);
+  }
+
   .topology-note {
     position: relative;
     padding: 0 22px 14px;
@@ -771,3 +913,47 @@
     font-size: 9px;
   }
 }
+
+/* ============================================================
+   Layover Topology & Processing Animations
+   ============================================================ */
+@keyframes txPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.82); }
+}
+
+@keyframes badgePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.75); }
+}
+
+@keyframes shimmer {
+  from { background-position: 190% 0; }
+  to { background-position: -90% 0; }
+}
+
+@keyframes flowX {
+  from { background-position: 0 0; }
+  to { background-position: 18px 0; }
+}
+
+@keyframes travelX {
+  0% { left: 2%; opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { left: 98%; opacity: 0; }
+}
+
+@keyframes nodeShake {
+  0%, 100% { transform: translateX(0); }
+  22% { transform: translateX(-3px); }
+  44% { transform: translateX(3px); }
+  66% { transform: translateX(-2px); }
+  82% { transform: translateX(2px); }
+}
+
+@keyframes ringPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.18); }
+  50% { box-shadow: 0 0 0 6px rgba(217, 119, 6, 0); }
+}
+

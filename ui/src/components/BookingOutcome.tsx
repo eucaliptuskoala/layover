@@ -7,29 +7,31 @@ export function BookingOutcome({
   run,
   elapsed,
   notify,
+  isPlaybackActive = false,
 }: {
   run: BookingRun;
   elapsed: number | null;
   notify: (message: string) => void;
+  isPlaybackActive?: boolean;
 }) {
   const response = run.phase === 'result' ? run.response : null;
   const isNaive = run.request.orchestrator === 'naive';
-  const presentation = response
+  const presentation = response && !isPlaybackActive
     ? getOutcome(response)
     : {
         tone: run.phase === 'rejected' ? 'coral' : 'amber',
-        icon: run.phase === 'pending' ? '◌' : '?',
+        icon: run.phase === 'pending' || isPlaybackActive ? '◌' : '?',
         label:
-          run.phase === 'pending'
+          run.phase === 'pending' || isPlaybackActive
             ? 'RUNNING'
             : run.phase === 'rejected'
               ? 'REJECTED'
               : 'OUTCOME UNKNOWN',
         note:
-          run.phase === 'pending'
+          run.phase === 'pending' || isPlaybackActive
             ? isNaive
-              ? 'Waiting for the gateway to finish single-attempt HTTP actions. Rollback state exists only in gateway memory.'
-              : 'Waiting for the gateway to finish the booking workflow. This can take longer during retries or if a worker is offline.'
+              ? 'Dispatching activities. In-memory rollback state exists only in RAM.'
+              : 'Coordinating workflow activities via Temporal event log.'
             : run.phase === 'unknown' || run.phase === 'rejected'
               ? run.message
               : '',

@@ -7,7 +7,7 @@ import os
 from abc import ABC, abstractmethod
 from typing import Any
 
-from layover_naive.coordinator import NaiveSagaCoordinator
+import httpx
 from temporalio.client import Client
 from temporalio.contrib.pydantic import pydantic_data_converter
 
@@ -19,6 +19,7 @@ TEMPORAL_HOST = os.getenv('TEMPORAL_HOST', 'localhost:7233')
 TEMPORAL_NAMESPACE = os.getenv('TEMPORAL_NAMESPACE', 'layover')
 TEMPORAL_TASK_QUEUE = os.getenv('TEMPORAL_TASK_QUEUE', 'booking-task-queue')
 TEMPORAL_WEB_UI = os.getenv('TEMPORAL_WEB_UI', 'http://localhost:8233')
+NAIVE_ORCHESTRATOR_URL = os.getenv('NAIVE_ORCHESTRATOR_URL', 'http://localhost:8004').rstrip('/')
 
 
 class SagaOrchestratorStrategy(ABC):
@@ -78,16 +79,18 @@ class TemporalSagaStrategy(SagaOrchestratorStrategy):
 
 
 class NaiveSagaStrategy(SagaOrchestratorStrategy):
-    """In-process baseline: killing the gateway destroys its volatile compensation stack."""
+    """External in-memory baseline: killing layover-naive destroys its volatile compensation stack."""
 
     async def execute(self, request: BookingRequest, payload: dict[str, Any]) -> BookingResponse:
+        booking_id = payload['booking_id']
         try:
-            # A fresh coordinator per request, never a stack stored in the shared registry.
-            result = await NaiveSagaCoordinator().execute(payload)
-            result_data = result.model_dump() if hasattr(result, 'model_dump') else dict(result)
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(f'{NAIVE_ORCHESTRATOR_URL}/book', json=payload)
+                resp.raise_for_status()
+                result_data = resp.json()
 
             return BookingResponse(
-                booking_id=payload['booking_id'],
+                booking_id=booking_id,
                 orchestrator='naive',
                 scenario=request.scenario.value,
                 status=result_data['status'],
@@ -99,7 +102,7 @@ class NaiveSagaStrategy(SagaOrchestratorStrategy):
             )
         except Exception as exc:
             return BookingResponse(
-                booking_id=payload['booking_id'],
+                booking_id=booking_id,
                 orchestrator='naive',
                 scenario=request.scenario.value,
                 status='FAILED',

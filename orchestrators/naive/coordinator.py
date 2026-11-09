@@ -1,134 +1,185 @@
-"""Single-attempt HTTP Saga with a volatile, execution-local LIFO compensation stack."""
+"""
+Naive In-Memory Saga Coordinator.
 
+Executes a single-attempt sequential HTTP Saga with an in-memory LIFO compensation stack.
+Has zero disk persistence, no restart recovery, and no direct database access.
+"""
+
+import asyncio
 import logging
 import os
-from dataclasses import dataclass
-from typing import Any
+from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 
-from .models import NaiveSagaInput, NaiveSagaResult, ServiceAcknowledgment
+try:
+    from .models import NaiveSagaInput, NaiveSagaResult, ServiceAcknowledgment
+except ImportError:
+    from models import NaiveSagaInput, NaiveSagaResult, ServiceAcknowledgment
 
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
-class SagaAction:
-    name: str
-    url: str
-    payload: dict[str, Any]
-    expected_state: str
-
-
 class SagaActionError(Exception):
-    def __init__(self, message: str, *, outcome_unknown: bool = False):
+    """Raised when an action fails, tracking whether the remote state is unknown."""
+
+    def __init__(self, message: str, *, outcome_unknown: bool = False) -> None:
         super().__init__(message)
         self.outcome_unknown = outcome_unknown
 
 
 class NaiveSagaCoordinator:
-    """No retries, persistence, restart recovery, or access to service databases.
+    """
+    In-memory Saga coordinator with ad-hoc LIFO rollbacks.
 
-    An injected client remains owned by its caller. Otherwise a scoped client is
-    closed after each execution. Instances contain configuration, never run state.
+    Operates purely in RAM: if this process is terminated (SIGKILL / OOM),
+    the compensation stack is lost forever, demonstrating orphaned holds in databases.
     """
 
     def __init__(
         self,
         *,
-        client: httpx.AsyncClient | None = None,
-        flight_url: str | None = None,
-        hotel_url: str | None = None,
-        payment_url: str | None = None,
+        client: Optional[httpx.AsyncClient] = None,
+        flight_url: Optional[str] = None,
+        hotel_url: Optional[str] = None,
+        payment_url: Optional[str] = None,
         timeout: float = 10.0,
-    ):
+    ) -> None:
         self.client = client
         self.flight_url = (flight_url or os.getenv('FLIGHT_SERVICE_URL', 'http://localhost:8001')).rstrip('/')
         self.hotel_url = (hotel_url or os.getenv('HOTEL_SERVICE_URL', 'http://localhost:8002')).rstrip('/')
         self.payment_url = (payment_url or os.getenv('PAYMENT_SERVICE_URL', 'http://localhost:8003')).rstrip('/')
         self.timeout = timeout
 
-    async def execute(self, payload: dict[str, Any]) -> NaiveSagaResult:
+    async def execute(self, payload: Dict[str, Any]) -> NaiveSagaResult:
+        """Entrypoint for executing a booking saga."""
         input_data = NaiveSagaInput.model_validate(payload)
 
         if self.client is not None:
-            return await self._execute(input_data, self.client)
+            return await self._run_saga(input_data, self.client)
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            return await self._execute(input_data, client)
+            return await self._run_saga(input_data, client)
 
-    def _actions(self, data: NaiveSagaInput) -> list[tuple[SagaAction, SagaAction | None]]:
+    async def _post_step(
+        self,
+        client: httpx.AsyncClient,
+        name: str,
+        url: str,
+        payload: Dict[str, Any],
+        expected_state: str,
+    ) -> None:
+        """Executes a single HTTP request and validates the service acknowledgment."""
+        try:
+            response = await client.post(url, json=payload, timeout=self.timeout)
+            response.raise_for_status()
+
+        except httpx.HTTPStatusError as exc:
+            status_code = exc.response.status_code
+            is_unknown = status_code >= 500 or status_code < 400 or status_code == 408
+            detail = exc.response.text[:500]
+            raise SagaActionError(
+                f'{name} rejected (HTTP {status_code}): {detail}',
+                outcome_unknown=is_unknown,
+            ) from exc
+
+        except httpx.RequestError as exc:
+            raise SagaActionError(
+                f'{name} did not return a response ({type(exc).__name__})',
+                outcome_unknown=True,
+            ) from exc
+
+        try:
+            ack = ServiceAcknowledgment.model_validate(response.json())
+            if ack.booking_id != payload['booking_id']:
+                raise ValueError('Response booking ID does not match the request')
+            if ack.status != expected_state:
+                raise ValueError(f'Response did not acknowledge state {expected_state}')
+
+        except (ValueError, TypeError) as exc:
+            raise SagaActionError(
+                f'{name} returned an unusable acknowledgment (HTTP {response.status_code})',
+                outcome_unknown=True,
+            ) from exc
+
+    async def _run_saga(
+        self,
+        data: NaiveSagaInput,
+        client: httpx.AsyncClient,
+    ) -> NaiveSagaResult:
+        """Coordinates the multi-step saga execution and LIFO rollbacks in memory."""
+        steps_completed: List[str] = []
+        compensations_executed: List[str] = []
+        compensations: List[Tuple[str, str, Dict[str, Any], str]] = []
+
         booking = {'booking_id': data.booking_id}
         rollback = {**booking, 'reason': f'Saga rollback for booking {data.booking_id}'}
 
-        return [
+        # Sequential pipeline definitions: (step_name, url, payload, expected_state, compensation_tuple)
+        pipeline = [
             (
-                SagaAction('reserve_flight', f'{self.flight_url}/reserve', {
-                    **booking, 'customer_id': data.customer_id,
-                    'flight_number': data.flight_number, 'price': data.flight_price,
-                }, 'RESERVED'),
-                SagaAction('cancel_flight', f'{self.flight_url}/cancel', rollback, 'CANCELLED'),
+                'reserve_flight',
+                f'{self.flight_url}/reserve',
+                {
+                    **booking,
+                    'customer_id': data.customer_id,
+                    'flight_number': data.flight_number,
+                    'price': data.flight_price,
+                },
+                'RESERVED',
+                ('cancel_flight', f'{self.flight_url}/cancel', rollback, 'CANCELLED'),
             ),
             (
-                SagaAction('reserve_hotel', f'{self.hotel_url}/reserve', {
-                    **booking, 'customer_id': data.customer_id,
-                    'hotel_name': data.hotel_name, 'price': data.hotel_price,
-                }, 'RESERVED'),
-                SagaAction('cancel_hotel', f'{self.hotel_url}/cancel', rollback, 'CANCELLED'),
+                'reserve_hotel',
+                f'{self.hotel_url}/reserve',
+                {
+                    **booking,
+                    'customer_id': data.customer_id,
+                    'hotel_name': data.hotel_name,
+                    'price': data.hotel_price,
+                },
+                'RESERVED',
+                ('cancel_hotel', f'{self.hotel_url}/cancel', rollback, 'CANCELLED'),
             ),
             (
-                SagaAction('charge_payment', f'{self.payment_url}/charge', {
-                    **booking, 'customer_id': data.customer_id, 'amount': data.total_amount,
-                }, 'CHARGED'),
-                SagaAction('refund_payment', f'{self.payment_url}/refund', rollback, 'REFUNDED'),
+                'charge_payment',
+                f'{self.payment_url}/charge',
+                {
+                    **booking,
+                    'customer_id': data.customer_id,
+                    'amount': data.total_amount,
+                },
+                'CHARGED',
+                ('refund_payment', f'{self.payment_url}/refund', rollback, 'REFUNDED'),
             ),
-            (SagaAction('confirm_flight', f'{self.flight_url}/confirm', booking, 'CONFIRMED'), None),
-            (SagaAction('confirm_hotel', f'{self.hotel_url}/confirm', booking, 'CONFIRMED'), None),
+            (
+                'confirm_flight',
+                f'{self.flight_url}/confirm',
+                booking,
+                'CONFIRMED',
+                None,
+            ),
+            (
+                'confirm_hotel',
+                f'{self.hotel_url}/confirm',
+                booking,
+                'CONFIRMED',
+                None,
+            ),
         ]
 
-    async def _post(self, client: httpx.AsyncClient, action: SagaAction) -> None:
         try:
-            response = await client.post(action.url, json=action.payload, timeout=self.timeout)
-            response.raise_for_status()
-        except httpx.HTTPStatusError as exc:
-            status_code = exc.response.status_code
-            # A server error or request timeout may be produced after the service committed.
-            unknown = status_code >= 500 or status_code < 400 or status_code == 408
-            detail = exc.response.text[:500]
-            raise SagaActionError(
-                f'{action.name} rejected (HTTP {status_code}): {detail}',
-                outcome_unknown=unknown,
-            ) from exc
-        except httpx.RequestError as exc:
-            raise SagaActionError(
-                f'{action.name} did not return a response ({type(exc).__name__})',
-                outcome_unknown=True,
-            ) from exc
+            for step_name, url, step_payload, expected_state, comp in pipeline:
+                # Artificial delay for manual chaos testing (e.g. docker stop / kill during live demo)
+                if data.delay_seconds > 0:
+                    await asyncio.sleep(data.delay_seconds)
 
-        try:
-            acknowledgment = ServiceAcknowledgment.model_validate(response.json())
-            if acknowledgment.booking_id != action.payload['booking_id']:
-                raise ValueError('Response booking ID does not match the request')
-            if acknowledgment.status != action.expected_state:
-                raise ValueError(f'Response did not acknowledge state {action.expected_state}')
-        except (ValueError, TypeError) as exc:
-            raise SagaActionError(
-                f'{action.name} returned an unusable acknowledgment (HTTP {response.status_code})',
-                outcome_unknown=True,
-            ) from exc
+                await self._post_step(client, step_name, url, step_payload, expected_state)
+                steps_completed.append(step_name)
 
-    async def _execute(self, data: NaiveSagaInput, client: httpx.AsyncClient) -> NaiveSagaResult:
-        steps_completed: list[str] = []
-        compensations_executed: list[str] = []
-        compensations: list[SagaAction] = []
-
-        try:
-            for action, compensation in self._actions(data):
-                await self._post(client, action)
-                steps_completed.append(action.name)
-                if compensation is not None:
-                    compensations.append(compensation)
+                if comp is not None:
+                    compensations.append(comp)
 
             return NaiveSagaResult(
                 booking_id=data.booking_id,
@@ -138,23 +189,25 @@ class NaiveSagaCoordinator:
             )
 
         except Exception as exc:
-            # SIGKILL cannot enter this handler. Task cancellation also propagates rather
-            # than pretending a volatile coordinator can guarantee shutdown recovery.
             outcome_unknown = not isinstance(exc, SagaActionError) or exc.outcome_unknown
             errors = [str(exc)]
             rollback_failed = False
-            logger.warning('Naive Saga failed for booking_id=%s; attempting known rollbacks', data.booking_id)
 
+            logger.warning(
+                f'Naive Saga failed for booking_id={data.booking_id}; executing in-memory rollbacks'
+            )
+
+            # LIFO rollback execution
             while compensations:
-                compensation = compensations.pop()
+                comp_name, comp_url, comp_payload, comp_state = compensations.pop()
                 try:
-                    await self._post(client, compensation)
-                    compensations_executed.append(compensation.name)
+                    await self._post_step(client, comp_name, comp_url, comp_payload, comp_state)
+                    compensations_executed.append(comp_name)
+
                 except Exception as rollback_exc:
                     rollback_failed = True
-                    outcome_unknown |= (
-                        not isinstance(rollback_exc, SagaActionError) or rollback_exc.outcome_unknown
-                    )
+                    is_unkn = not isinstance(rollback_exc, SagaActionError) or rollback_exc.outcome_unknown
+                    outcome_unknown = outcome_unknown or is_unkn
                     errors.append(f'Compensation failed: {rollback_exc}')
 
             if outcome_unknown:
@@ -162,9 +215,11 @@ class NaiveSagaCoordinator:
             elif rollback_failed:
                 errors.append('Rollback is incomplete; manual reconciliation is required.')
 
+            is_compensated = bool(steps_completed) and not rollback_failed and not outcome_unknown
+
             return NaiveSagaResult(
                 booking_id=data.booking_id,
-                status='COMPENSATED' if steps_completed and not rollback_failed and not outcome_unknown else 'FAILED',
+                status='COMPENSATED' if is_compensated else 'FAILED',
                 total_amount=data.total_amount,
                 steps_completed=steps_completed,
                 compensations_executed=compensations_executed,

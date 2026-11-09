@@ -1,4 +1,4 @@
-export type ScenarioKey = 'happy_path' | 'fail_payment' | 'fail_hotel' | 'custom';
+export type ScenarioKey = 'happy_path' | 'fail_payment' | 'fail_hotel' | 'slow_demo' | 'custom';
 export type Orchestrator = 'temporal' | 'naive';
 
 export interface Scenario {
@@ -22,6 +22,7 @@ export interface BookingRequest {
   flight_price?: number;
   hotel_name?: string;
   hotel_price?: number;
+  delay_seconds?: number;
 }
 
 export interface BookingResponse {
@@ -66,7 +67,7 @@ function isStringArray(value: unknown): value is string[] {
 }
 
 export function isScenarioKey(value: unknown): value is ScenarioKey {
-  return ['happy_path', 'fail_payment', 'fail_hotel', 'custom'].includes(String(value));
+  return ['happy_path', 'fail_payment', 'fail_hotel', 'slow_demo', 'custom'].includes(String(value));
 }
 
 export function isScenario(value: unknown): value is Scenario {

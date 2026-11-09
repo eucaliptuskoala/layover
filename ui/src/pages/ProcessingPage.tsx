@@ -6,6 +6,7 @@ import { ExecutionSummary } from '../components/ExecutionSummary';
 import { Icon } from '../components/Icon';
 import { ServiceTopology } from '../components/ServiceTopology';
 import { useElapsed } from '../hooks/useElapsed';
+import { useTopologyPlayback } from '../hooks/useTopologyPlayback';
 import { getOutcome, getTemporalUrl, type BookingRun } from '../lib/booking';
 import { formatMoney } from '../lib/format';
 
@@ -22,13 +23,27 @@ export function ProcessingPage({
   const activeRun = run?.request.booking_id === bookingId ? run : null;
   const elapsed = useElapsed(activeRun);
   const response = activeRun?.phase === 'result' ? activeRun.response : null;
-  const title = response
-    ? getOutcome(response).title
-    : activeRun?.phase === 'pending'
-      ? 'Reserving your layover'
-      : activeRun?.phase === 'rejected'
-        ? 'Booking request rejected'
-        : 'Booking outcome unknown';
+
+  // Historical runs (loaded from storage or >6s old) skip animation and show settled state
+  const isHistorical =
+    !!activeRun && activeRun.phase === 'result' && Date.now() - activeRun.startedAt > 6000;
+  const playback = useTopologyPlayback({
+    response,
+    isPending: activeRun?.phase === 'pending',
+    isHistorical,
+  });
+
+  const isAnimating = !playback.isComplete && !isHistorical && !!response;
+
+  const title = isAnimating
+    ? 'Coordinating saga transaction...'
+    : response
+      ? getOutcome(response).title
+      : activeRun?.phase === 'pending'
+        ? 'Reserving your layover'
+        : activeRun?.phase === 'rejected'
+          ? 'Booking request rejected'
+          : 'Booking outcome unknown';
   const isNaive = activeRun?.request.orchestrator === 'naive';
   const temporalUrl = getTemporalUrl(
     bookingId || '',
@@ -63,7 +78,13 @@ export function ProcessingPage({
   return (
     <div
       className="processing-page"
-      data-outcome={activeRun.phase === 'result' ? response?.status.toLowerCase() : activeRun.phase}
+      data-outcome={
+        isAnimating
+          ? 'running'
+          : activeRun.phase === 'result'
+            ? response?.status.toLowerCase()
+            : activeRun.phase
+      }
     >
       <a className="skip-link" href="#main">
         Skip to booking result
@@ -95,7 +116,7 @@ export function ProcessingPage({
               <span className="status-dot" />
               Saga experiment{' '}
               <span className="text-faint">
-                / {activeRun.phase === 'pending' ? 'in flight' : 'gateway summary'}
+                / {activeRun.phase === 'pending' || isAnimating ? 'in flight' : 'gateway summary'}
               </span>
             </span>
             <h1>{title}</h1>
@@ -122,10 +143,21 @@ export function ProcessingPage({
           elapsed={elapsed}
           health={health}
           orchestrator={activeRun.request.orchestrator}
+          playback={playback}
         />
         <div className="processing-grid">
-          <ExecutionSummary run={activeRun} elapsed={elapsed} notify={notify} />
-          <BookingOutcome run={activeRun} elapsed={elapsed} notify={notify} />
+          <ExecutionSummary
+            run={activeRun}
+            elapsed={elapsed}
+            notify={notify}
+            isPlaybackActive={isAnimating}
+          />
+          <BookingOutcome
+            run={activeRun}
+            elapsed={elapsed}
+            notify={notify}
+            isPlaybackActive={isAnimating}
+          />
           <section className="developer-actions card" aria-label="Developer actions">
             <h2 className="eyebrow">Developer</h2>
             {temporalUrl ? (

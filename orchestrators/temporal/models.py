@@ -15,6 +15,7 @@ class BookingWorkflowInput(BaseModel):
     flight_price: float = Field(description='Price for flight reservation')
     hotel_name: str = Field(description='Hotel name')
     hotel_price: float = Field(description='Price for hotel room reservation')
+    delay_seconds: float = Field(default=0.0, description='Artificial pause between steps')
 
     @property
     def total_amount(self) -> float:

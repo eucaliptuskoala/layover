@@ -19,6 +19,7 @@ class ScenarioType(str, Enum):
     HAPPY_PATH = 'happy_path'
     FAIL_HOTEL = 'fail_hotel'
     FAIL_PAYMENT = 'fail_payment'
+    SLOW_DEMO = 'slow_demo'
     CUSTOM = 'custom'
 
 
@@ -42,6 +43,10 @@ class BookingRequest(BaseModel):
     flight_price: Optional[float] = None
     hotel_name: Optional[str] = None
     hotel_price: Optional[float] = None
+    delay_seconds: float = Field(
+        default=0.0,
+        description='Artificial delay between saga steps (seconds) for manual chaos demo',
+    )
 
 
 class BookingResponse(BaseModel):

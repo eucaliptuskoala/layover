@@ -15,6 +15,7 @@ const SCENARIO_LABELS: Record<string, { name: string; hint: string }> = {
   happy_path: { name: 'Happy path', hint: 'all steps complete' },
   fail_payment: { name: 'Payment decline', hint: '400 · LIFO rollback' },
   fail_hotel: { name: 'Hotel rejection', hint: '422 · partial rollback' },
+  slow_demo: { name: 'Chaos pause (4s)', hint: 'manual crash window' },
 };
 
 export function SandboxPanel({
@@ -208,11 +209,6 @@ export function SandboxPanel({
                 <em>{SCENARIO_LABELS[scenario.key]?.hint || 'gateway scenario'}</em>
               </label>
             ))}
-            <label className="scenario-option unavailable">
-              <input type="radio" name="scenario" value="worker_crash" disabled />
-              <span>Worker crash</span>
-              <em>not implemented</em>
-            </label>
           </div>
         </fieldset>
 
@@ -221,9 +217,9 @@ export function SandboxPanel({
         </p>
         <p className="sandbox-note text-[10px]">
           {selectedOrchestrator === 'naive'
-            ? 'In-memory: single HTTP attempts and volatile rollback state. A gateway crash has no automatic recovery.'
-            : 'Temporal: durable workflow history and activity retries while the server remains available.'}{' '}
-          Crash injection is not available from this UI.
+            ? 'In-memory: single HTTP attempts and volatile rollback state. Process crash destroys compensation stack.'
+            : 'Temporal: durable workflow history and activity retries. Recovers automatically upon worker restart.'}{' '}
+          Simulate container crashes via docker kill during Chaos pause.
         </p>
       </div>
     </aside>

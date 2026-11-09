@@ -14,6 +14,7 @@ class NaiveSagaInput(BaseModel):
     flight_price: float
     hotel_name: str
     hotel_price: float
+    delay_seconds: float = 0.0
 
     @property
     def total_amount(self) -> float:

@@ -7,10 +7,12 @@ export function ExecutionSummary({
   run,
   elapsed,
   notify,
+  isPlaybackActive = false,
 }: {
   run: BookingRun;
   elapsed: number | null;
   notify: (message: string) => void;
+  isPlaybackActive?: boolean;
 }) {
   const response = run.phase === 'result' ? run.response : null;
   const bookingId = response?.booking_id || run.request.booking_id;
@@ -43,7 +45,7 @@ export function ExecutionSummary({
         </button>
       </div>
 
-      {response ? (
+      {response && !isPlaybackActive ? (
         <>
           {response.steps_completed.length ? (
             <ol className="execution-list" aria-label="Completed actions">

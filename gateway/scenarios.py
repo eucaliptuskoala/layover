@@ -38,6 +38,15 @@ DEFAULT_SCENARIOS: Dict[ScenarioType, Dict] = {
         'hotel_price': -1.0,  # Negative price triggers 422 Unprocessable Entity rejection at Hotel API
         'description': 'Hotel reservation rejected (422 Unprocessable). Triggers immediate flight cancellation.',
     },
+    ScenarioType.SLOW_DEMO: {
+        'customer_id': 'user_1',
+        'flight_number': 'LH-204',
+        'flight_price': 250.0,
+        'hotel_name': 'Grand Palace Hotel',
+        'hotel_price': 150.0,
+        'delay_seconds': 4.0,
+        'description': 'Happy path with 4.0s pause between steps. Provides a window for manual docker kill demonstration.',
+    },
 }
 
 
@@ -57,6 +66,7 @@ def resolve_booking_payload(request: BookingRequest) -> Dict:
     flight_price = request.flight_price if request.flight_price is not None else scenario_defaults['flight_price']
     hotel_name = request.hotel_name or scenario_defaults['hotel_name']
     hotel_price = request.hotel_price if request.hotel_price is not None else scenario_defaults['hotel_price']
+    delay_seconds = request.delay_seconds or scenario_defaults.get('delay_seconds', 0.0)
 
     return {
         'booking_id': booking_id,
@@ -66,4 +76,5 @@ def resolve_booking_payload(request: BookingRequest) -> Dict:
         'hotel_name': hotel_name,
         'hotel_price': float(hotel_price),
         'total_amount': round(float(flight_price) + float(hotel_price), 2),
+        'delay_seconds': float(delay_seconds),
     }

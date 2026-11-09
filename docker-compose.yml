@@ -88,10 +88,36 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  naive-orchestrator:
+    build:
+      context: ./orchestrators/naive
+      dockerfile: Dockerfile
+    container_name: layover-naive
+    ports:
+      - "8004:8004"
+    environment:
+      - FLIGHT_SERVICE_URL=http://flight-service:8001
+      - HOTEL_SERVICE_URL=http://hotel-service:8002
+      - PAYMENT_SERVICE_URL=http://payment-service:8003
+    depends_on:
+      flight-service:
+        condition: service_healthy
+      hotel-service:
+        condition: service_healthy
+      payment-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
   gateway:
     build:
-      context: .
-      dockerfile: gateway/Dockerfile
+      context: ./gateway
+      dockerfile: Dockerfile
     container_name: layover-gateway
     ports:
       - "8000:8000"
@@ -103,6 +129,7 @@ services:
       - FLIGHT_SERVICE_URL=http://flight-service:8001
       - HOTEL_SERVICE_URL=http://hotel-service:8002
       - PAYMENT_SERVICE_URL=http://payment-service:8003
+      - NAIVE_ORCHESTRATOR_URL=http://naive-orchestrator:8004
     depends_on:
       temporal:
         condition: service_started
@@ -111,6 +138,8 @@ services:
       hotel-service:
         condition: service_healthy
       payment-service:
+        condition: service_healthy
+      naive-orchestrator:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]

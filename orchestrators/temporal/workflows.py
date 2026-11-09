@@ -74,6 +74,9 @@ class BookingWorkflow:
             # -----------------------------------------------------------
             # Step 1: Reserve Flight
             # -----------------------------------------------------------
+            if input_data.delay_seconds > 0:
+                await workflow.sleep(timedelta(seconds=input_data.delay_seconds))
+
             workflow.logger.info(f'Step 1: Reserving flight {input_data.flight_number}')
             flight_req = FlightReservationRequest(
                 booking_id=input_data.booking_id,
@@ -102,6 +105,9 @@ class BookingWorkflow:
             # -----------------------------------------------------------
             # Step 2: Reserve Hotel
             # -----------------------------------------------------------
+            if input_data.delay_seconds > 0:
+                await workflow.sleep(timedelta(seconds=input_data.delay_seconds))
+
             workflow.logger.info(f'Step 2: Reserving hotel {input_data.hotel_name}')
             hotel_req = HotelReservationRequest(
                 booking_id=input_data.booking_id,
@@ -130,6 +136,9 @@ class BookingWorkflow:
             # -----------------------------------------------------------
             # Step 3: Charge Payment
             # -----------------------------------------------------------
+            if input_data.delay_seconds > 0:
+                await workflow.sleep(timedelta(seconds=input_data.delay_seconds))
+
             workflow.logger.info(
                 f'Step 3: Charging ${input_data.total_amount} from customer {input_data.customer_id}'
             )
@@ -159,6 +168,9 @@ class BookingWorkflow:
             # -----------------------------------------------------------
             # Step 4: Confirm Reservations
             # -----------------------------------------------------------
+            if input_data.delay_seconds > 0:
+                await workflow.sleep(timedelta(seconds=input_data.delay_seconds))
+
             workflow.logger.info('Step 4: Finalizing and confirming reservations')
             await workflow.execute_activity(
                 confirm_flight_activity,

@@ -61,11 +61,11 @@ describe('booking sandbox', () => {
     expect(screen.getByText(/Negative hotel price/)).toBeVisible();
   });
 
-  it('enables both engines, defaults to Temporal, and keeps worker-crash unavailable', async () => {
+  it('enables both engines and defaults to Temporal', async () => {
     await openCheckout();
 
     expect(screen.getByRole('radio', { name: /In-memory/ })).toBeEnabled();
-    expect(screen.getByRole('radio', { name: /Worker crash/ })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: /Happy path/ })).toBeEnabled();
     expect(screen.getByRole('radio', { name: /Temporal/ })).toBeChecked();
   });
 

@@ -7,7 +7,6 @@ import httpx
 import pytest
 
 import dispatcher
-from layover_naive.coordinator import NaiveSagaCoordinator
 from models import BookingRequest, BookingResponse, OrchestratorType, ScenarioType
 from scenarios import resolve_booking_payload
 
@@ -53,29 +52,28 @@ def test_registry_uses_concrete_strategies_with_an_abstract_interface():
     (ScenarioType.FAIL_HOTEL, 'COMPENSATED', ['cancel_flight']),
     (ScenarioType.FAIL_PAYMENT, 'COMPENSATED', ['cancel_hotel', 'cancel_flight']),
 ])
-async def test_naive_strategy_runs_real_coordinator_without_temporal(scenario, expected_status, expected_compensations):
+async def test_naive_strategy_runs_via_http_orchestrator(scenario, expected_status, expected_compensations):
     request = BookingRequest(orchestrator='naive', scenario=scenario, booking_id='bk-naive-dispatch')
-    calls = []
+    payload = resolve_booking_payload(request)
 
-    def handler(http_request):
-        payload = json.loads(http_request.content)
-        path = http_request.url.path
-        calls.append((path, payload))
-        if scenario == ScenarioType.FAIL_HOTEL and http_request.url.port == 8002:
-            assert payload['price'] == -1.0
-            return httpx.Response(422, json={'detail': 'Hotel validation failed'})
-        if scenario == ScenarioType.FAIL_PAYMENT and path == '/charge':
-            return httpx.Response(400, json={'detail': 'Insufficient funds'})
-        status = {'/reserve': 'RESERVED', '/charge': 'CHARGED', '/confirm': 'CONFIRMED', '/cancel': 'CANCELLED'}[path]
-        return httpx.Response(201 if path in ('/reserve', '/charge') else 200, json={**payload, 'status': status})
+    mock_response = httpx.Response(
+        200,
+        request=httpx.Request('POST', 'http://test'),
+        json={
+            'booking_id': 'bk-naive-dispatch',
+            'status': expected_status,
+            'total_amount': payload['total_amount'],
+            'steps_completed': ['reserve_flight', 'reserve_hotel', 'charge_payment', 'confirm_flight', 'confirm_hotel'] if expected_status == 'CONFIRMED' else ['reserve_flight'],
+            'compensations_executed': expected_compensations,
+            'error_message': None if expected_status == 'CONFIRMED' else 'Business rule rejection',
+        },
+    )
 
-    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-        coordinator = NaiveSagaCoordinator(client=client)
-        with (
-            patch('dispatcher.NaiveSagaCoordinator', return_value=coordinator),
-            patch('dispatcher.Client.connect', new_callable=AsyncMock) as temporal_connect,
-        ):
-            result = await dispatcher.dispatch_booking(request)
+    with (
+        patch('httpx.AsyncClient.post', new_callable=AsyncMock, return_value=mock_response) as mock_post,
+        patch('dispatcher.Client.connect', new_callable=AsyncMock) as temporal_connect,
+    ):
+        result = await dispatcher.dispatch_booking(request)
 
     assert result.booking_id == request.booking_id
     assert result.orchestrator == 'naive'
@@ -83,7 +81,8 @@ async def test_naive_strategy_runs_real_coordinator_without_temporal(scenario, e
     assert result.status == expected_status
     assert result.compensations_executed == expected_compensations
     assert result.temporal_ui_url is None
-    assert result.total_amount == resolve_booking_payload(request)['total_amount']
+    assert result.total_amount == payload['total_amount']
+    mock_post.assert_awaited_once()
     temporal_connect.assert_not_awaited()
 
 
@@ -92,16 +91,19 @@ async def test_custom_scenario_and_fields_are_preserved_for_naive():
         orchestrator='naive', scenario='custom', booking_id='bk-custom', customer_id='custom-user',
         flight_number='CUSTOM-1', flight_price=12.5, hotel_name='Custom hotel', hotel_price=10.0,
     )
-    coordinator = AsyncMock(spec=NaiveSagaCoordinator)
-    coordinator.execute.return_value = {
-        'booking_id': 'bk-custom', 'status': 'CONFIRMED', 'total_amount': 22.5,
-        'steps_completed': ['reserve_flight', 'reserve_hotel', 'charge_payment', 'confirm_flight', 'confirm_hotel'],
-        'compensations_executed': [], 'error_message': None,
-    }
-    with patch('dispatcher.NaiveSagaCoordinator', return_value=coordinator):
+    mock_response = httpx.Response(
+        200,
+        request=httpx.Request('POST', 'http://test'),
+        json={
+            'booking_id': 'bk-custom', 'status': 'CONFIRMED', 'total_amount': 22.5,
+            'steps_completed': ['reserve_flight', 'reserve_hotel', 'charge_payment', 'confirm_flight', 'confirm_hotel'],
+            'compensations_executed': [], 'error_message': None,
+        },
+    )
+    with patch('httpx.AsyncClient.post', new_callable=AsyncMock, return_value=mock_response) as mock_post:
         result = await dispatcher.dispatch_booking(request)
 
-    coordinator.execute.assert_awaited_once_with(resolve_booking_payload(request))
+    mock_post.assert_awaited_once()
     assert result.scenario == 'custom'
     assert result.total_amount == 22.5
 
