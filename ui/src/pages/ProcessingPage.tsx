@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 
 import type { HealthReport } from '../api/contracts';
@@ -13,11 +14,9 @@ import { formatMoney } from '../lib/format';
 export function ProcessingPage({
   run,
   health,
-  notify,
 }: {
   run: BookingRun | null;
   health: HealthReport | null;
-  notify: (message: string) => void;
 }) {
   const { bookingId } = useParams();
   const activeRun = run?.request.booking_id === bookingId ? run : null;
@@ -25,8 +24,9 @@ export function ProcessingPage({
   const response = activeRun?.phase === 'result' ? activeRun.response : null;
 
   // Historical runs (loaded from storage or >6s old) skip animation and show settled state
+  const [mountTime] = useState(() => Date.now());
   const isHistorical =
-    !!activeRun && activeRun.phase === 'result' && Date.now() - activeRun.startedAt > 6000;
+    !!activeRun && activeRun.phase === 'result' && mountTime - activeRun.startedAt > 6000;
   const playback = useTopologyPlayback({
     response,
     isPending: activeRun?.phase === 'pending',
@@ -149,13 +149,11 @@ export function ProcessingPage({
           <ExecutionSummary
             run={activeRun}
             elapsed={elapsed}
-            notify={notify}
             isPlaybackActive={isAnimating}
           />
           <BookingOutcome
             run={activeRun}
             elapsed={elapsed}
-            notify={notify}
             isPlaybackActive={isAnimating}
           />
           <section className="developer-actions card" aria-label="Developer actions">

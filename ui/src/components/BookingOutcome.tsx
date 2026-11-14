@@ -1,3 +1,5 @@
+import { toast } from 'sonner';
+
 import { getOutcome, getServiceStates, type BookingRun } from '../lib/booking';
 import { downloadRun } from '../lib/download';
 import { formatDuration, formatMoney } from '../lib/format';
@@ -6,12 +8,10 @@ import { Icon } from './Icon';
 export function BookingOutcome({
   run,
   elapsed,
-  notify,
   isPlaybackActive = false,
 }: {
   run: BookingRun;
   elapsed: number | null;
-  notify: (message: string) => void;
   isPlaybackActive?: boolean;
 }) {
   const response = run.phase === 'result' ? run.response : null;
@@ -41,9 +41,9 @@ export function BookingOutcome({
   function download() {
     try {
       downloadRun(run);
-      notify('Experiment summary downloaded');
+      toast.success('Experiment summary downloaded');
     } catch {
-      notify('Could not download the experiment summary.');
+      toast.error('Could not download the experiment summary.');
     }
   }
 

@@ -1,12 +1,12 @@
 # Contract & Integration Testing v2: End-to-End Test Suite & Chaos Testing
 
-> **Evolution Notice:** This document represents **Version 2** of the Contract and Integration Testing evidence. It builds directly upon [Version 1 (Microservice Contract & Integration Testing)](./lo2-contract-and-integration-testing.md), expanding the testing harness from 32 microservice tests to an exhaustive **117-test multi-tier quality suite** and detailing the live Chaos Testing methodology.
+> **Evolution Notice:** This document represents **Version 2** of the Contract and Integration Testing evidence. It builds directly upon [Version 1 (Microservice Contract & Integration Testing)](./lo2-contract-and-integration-testing.md), expanding the testing harness from 32 microservice tests to an exhaustive **120-test multi-tier quality suite** with Temporal Workflow Replay testing and detailing the live Chaos Testing methodology.
 
 ---
 
 ## Introduction
 
-> Engineered an end-to-end automated testing architecture spanning 117 tests across five isolated test suites in Python and TypeScript for **Software Quality (LO2)**. Combined mock-free database unit tests, ASGI transport integration tests, strategy pattern dispatcher mocks, workflow event verification, frontend component contracts, and live Chaos Testing via step latency injection to empirically validate distributed failure recovery.
+> Engineered an end-to-end automated testing architecture spanning 120 tests across five isolated test suites in Python and TypeScript for **Software Quality (LO2)**. Combined mock-free database unit tests, ASGI transport integration tests, strategy pattern dispatcher mocks, workflow event verification, workflow replay determinism tests, frontend component contracts, and live Chaos Testing via step latency injection to empirically validate distributed failure recovery.
 
 ---
 
@@ -42,7 +42,7 @@ graph TD
 
     subgraph Tier2 ["Tier 2: Orchestrator Pipeline Tests (Pytest)"]
         Naive_Tests["18 Naive Saga Tests (LIFO Rollbacks, API Endpoints)"]
-        Temporal_Tests["3 Temporal Saga Tests (Workflow Logic & Mock Activities)"]
+        Temporal_Tests["6 Temporal Saga Tests (Workflow Logic, Rollbacks & Replay)"]
     end
 
     subgraph Tier1 ["Tier 1: Microservice Unit & Integration Tests (Pytest)"]
@@ -55,16 +55,16 @@ graph TD
     Tier2 -.-> Tier1
 ```
 
-### Complete Test Inventory (117 Total Tests):
+### Complete Test Inventory (120 Total Tests):
 
 | Test Suite | Framework | Scope & Focus | Passed Count |
 | :--- | :--- | :--- | :--- |
 | **Microservices** (`services/*/tests`) | Pytest + httpx | SQLite table initialization, CAS transitions, idempotency guards, and REST endpoints for Flight, Hotel, and Payment. | **32** |
 | **Naive Orchestrator** (`orchestrators/naive/tests`) | Pytest + MockTransport | Forward execution order, LIFO rollback order, partial rollbacks, and FastAPI endpoints. | **18** |
 | **API Gateway** (`gateway/tests`) | Pytest + MockTransport | Strategy selection, scenario payload construction, and healthcheck aggregation. | **19** |
-| **Temporal Orchestrator** (`orchestrators/temporal/tests`) | Pytest + temporalio | Workflow deterministic execution, activity registration, and compensation triggers. | **3** |
+| **Temporal Orchestrator** (`orchestrators/temporal/tests`) | Pytest + temporalio | Workflow deterministic execution, activity registration, compensation triggers, and Replay Testing. | **6** |
 | **Frontend UI** (`ui/tests`) | Vitest + Testing Library | Contract parsers, scenario state synchronization, and component rendering. | **45** |
-| **Total Automated Tests** | | | **117** |
+| **Total Automated Tests** | | | **120** |
 
 ---
 
@@ -128,6 +128,50 @@ Using Vitest and React Testing Library, the UI test suite validates user interac
 * `PriceSummary.test.tsx`: Validates currency formatting and reactive total calculation.
 * `gateway.test.ts`: Tests API client resilience against simulated network timeouts and HTTP 500 error payloads.
 * `App.test.tsx`: Verifies full rendering flow from scenario selection to visual status updates.
+
+---
+
+### 4 Temporal Workflow Replay & Determinism Testing (6 Tests)
+
+In addition to workflow logic and mock activity execution, I implemented dedicated **Workflow Replay Testing** in `orchestrators/temporal/tests/test_replay.py` using Temporal's native `temporalio.worker.Replayer`.
+
+#### The Architectural Problem: Why Determinism is Mandatory
+Temporal achieves fault tolerance and durable execution through **Event Sourcing Replay**:
+1. When a workflow is running and a worker crashes (or an activity finishes), Temporal does not restore state from a memory snapshot.
+2. Instead, a new worker is assigned, pulls the complete **Event History** from the Temporal cluster, and **re-executes the workflow function from line 1**.
+3. During this replay, activities that have already completed are not re-executed; Temporal simply returns their recorded results from the event history.
+4. **The Critical Constraint:** Because the workflow function is re-executed, its code **must be 100% deterministic**. If a developer introduces non-deterministic code—such as standard `time.time()`, `datetime.now()`, `uuid.uuid4()`, or random branching—the replayed execution will make different decisions than the recorded history, throwing a fatal `NonDeterministicWorkflowError` and bricking the workflow.
+
+#### How Temporal Sandboxing Enforces Constraints
+The Temporal Python SDK enforces this at runtime via `SandboxedWorkflowRunner` (`temporalio.worker.workflow_sandbox`). The sandbox intercepts imports and explicitly forbids non-deterministic library calls inside workflow code:
+* `time`: calls like `sleep()`, `time()`, `perf_counter()` are blocked (developers must use `await workflow.sleep()` or `workflow.now()`).
+* `uuid`: calls like `uuid1()`, `uuid4()`, `uuid7()` are blocked (must use `workflow.uuid4()`).
+* `random`: non-seeded random calls are restricted.
+
+#### The Replay Testing Methodology
+To prove backwards compatibility and determinism ahead of production deployments, I authored a three-part replay test suite:
+
+```python
+# 1. Capture real historical events from a workflow run
+handle = env.client.get_workflow_handle(workflow_id)
+history = await handle.fetch_history()
+
+# 2. Replay historical events against current workflow code
+replayer = Replayer(
+    workflows=[BookingWorkflow],
+    data_converter=pydantic_data_converter,
+)
+replay_result = await replayer.replay_workflow(history, raise_on_replay_failure=False)
+
+assert replay_result.replay_failure is None
+```
+
+The test suite validates three distinct conditions:
+1. **Happy Path Replay (`test_replay_happy_path_history`):** Validates that an end-to-end confirmed booking history replays with zero state discrepancies.
+2. **Compensated Replay (`test_replay_compensated_history`):** Validates that an LIFO rollback history (with `cancel_hotel` and `cancel_flight` compensation events) replays identically through the failure handling branches.
+3. **Negative Determinism Test (`test_replay_detects_non_deterministic_divergence`):** Tests a mutated workflow definition (`MutatedBookingWorkflow`) that injects an unauthorized extra activity before reservations. The test proves that `Replayer` immediately detects the divergence between code and event history and registers a `replay_failure`.
+
+This suite proves that `BookingWorkflow` is mathematically deterministic and immune to workflow state divergence.
 
 ---
 
@@ -204,7 +248,7 @@ docker start layover-worker
 
 ## Test Execution Evidence
 
-All 117 tests pass deterministically across all environments:
+All 120 tests pass deterministically across all environments:
 
 ```bash
 # Run all backend test suites
@@ -220,13 +264,13 @@ cd ui && npm test
 ```
 
 ```text
-============================== 72 passed in 1.94s ============================== (Backend)
+============================== 75 passed in 2.01s ============================== (Backend)
 ============================== 45 passed in 1.48s ============================== (Frontend)
-============================== 117 Total Passed ===============================
+============================== 120 Total Passed ===============================
 ```
 
 ---
 
 ## Reflection & Learning Outcome Justification
 
-* **Software Quality (LO2):** Formulated and executed a complete multi-tier testing architecture (117 tests) validating contracts, atomic updates, idempotency, and error boundaries. Pioneered latency-injected Chaos Testing to empirically prove the fault tolerance limits of in-memory coordination versus durable event-driven state machines.
+* **Software Quality (LO2):** Formulated and executed a complete multi-tier testing architecture (120 tests) validating contracts, atomic updates, idempotency, workflow history determinism via Replayer, and error boundaries. Pioneered latency-injected Chaos Testing to empirically prove the fault tolerance limits of in-memory coordination versus durable event-driven state machines.

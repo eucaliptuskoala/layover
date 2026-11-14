@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { Navigate, Route, Routes, useNavigate } from 'react-router';
+import { toast, Toaster } from 'sonner';
 
 import type { Orchestrator, Scenario, ScenarioKey } from './api/contracts';
 import { getHealth, getScenarios } from './api/gateway';
-import { Toast } from './components/Toast';
 import { useBooking } from './hooks/useBooking';
 import { useResource } from './hooks/useResource';
 import { useRouteFocus } from './hooks/useRouteFocus';
-import { useToast } from './hooks/useToast';
 import { readScenario, saveScenario } from './lib/storage';
 import { CheckoutPage } from './pages/CheckoutPage';
 import { ProcessingPage } from './pages/ProcessingPage';
@@ -20,7 +19,9 @@ export default function App() {
   const [selectedOrchestrator, setSelectedOrchestrator] = useState<Orchestrator>(
     run?.request.orchestrator ?? 'temporal',
   );
-  const { message, notify } = useToast();
+  const notify = (msg: string) => {
+    toast(msg);
+  };
   const navigate = useNavigate();
   useRouteFocus();
 
@@ -59,13 +60,12 @@ export default function App() {
             <ProcessingPage
               run={run}
               health={health.status === 'success' ? health.data : null}
-              notify={notify}
             />
           }
         />
         <Route path="*" element={<Navigate to="/checkout" replace />} />
       </Routes>
-      <Toast message={message} />
+      <Toaster position="bottom-right" richColors />
     </>
   );
 }

@@ -109,16 +109,21 @@ Copy `.env.example` to `.env` (already done by default):
 cp .env.example .env
 ```
 
-### 3. Run the Test Suite
+### 3. Run the Test Suite (120 Automated Tests)
 
-Run unit and contract tests from each independent project:
+The platform is backed by a 120-test multi-tier quality harness across backend and frontend:
+* **75 Backend Tests (Pytest):** SQLite schema & CAS updates, ASGI contract tests, strategy dispatching, and Temporal Saga workflows with **Workflow Replay Determinism Verification**.
+* **45 Frontend Tests (Vitest):** Component state synchronization, reactive total calculations, and API error guard testing.
 
 ```bash
-# Run tests across all services and orchestrators
+# Run backend test suites across all services and orchestrators (75 tests)
 for d in services/* orchestrators/naive orchestrators/temporal gateway; do (cd "$d" && uv run pytest); done
 
-# Or run tests for a single service:
-cd services/flight && uv run pytest
+# Run frontend Vitest suite (45 tests)
+cd ui && npm test -- --run
+
+# On-demand cross-container database integrity & orphaned hold check
+python scripts/check_integrity.py
 ```
 
 Live gateway tests and `SIGKILL` comparisons are opt-in. They create fresh databases,
@@ -245,11 +250,21 @@ layover/
 │
 ├── ui/                        # React 19 UI Dashboard (:5173); interactive sandbox & state visualizer
 │
+├── scripts/                   # Operational & Integrity Tooling
+│   └── check_integrity.py     # Cross-container SQLite audit (orphaned holds & balance checks)
+│
 ├── docs/                      # Personal Development Plan, Cycle Reports & Portfolio Evidences
 │   ├── pdp.md                 # 5-Cycle Research & Learning Outcomes plan
 │   ├── cycle-1.md             # Cycle 1 Research & Problem Scoping report
 │   ├── cycle-4.md             # Cycle 4 Baseline In-Memory & UI Dashboard report
-│   └── evidences/             # Portfolio evidence documents (LO1, LO2, LO3)
+│   ├── demo-scenarios.md      # Live demonstration runbook & Bloom Level 4/5 defense Q&A
+│   ├── feedback.md            # Peer knowledge sharing feedback notes
+│   └── evidences/             # Portfolio evidence documents (LO1, LO2, LO3, LO4 ADR, LO5)
+│       ├── lo1/               # Microservices architecture, UI, and orchestrators
+│       ├── lo2/               # 120-test multi-tier quality suite & chaos testing v2
+│       ├── lo3/               # Docker containerization v2 & CI/CD pipeline
+│       ├── lo4/               # Interim Architectural Decision Record (ADR)
+│       └── lo5/               # Peer feedback analysis & Personal Leadership reflection
 │
 ├── docker-compose.yml         # Container orchestration with healthchecks & volumes
 ├── ruff.toml                  # Pragmatic linter configuration

@@ -1,3 +1,6 @@
+import { motion } from 'motion/react';
+import { toast } from 'sonner';
+
 import type { BookingRun } from '../lib/booking';
 import { getStepLabel } from '../lib/booking';
 import { formatDuration, formatTime } from '../lib/format';
@@ -6,12 +9,10 @@ import { Icon } from './Icon';
 export function ExecutionSummary({
   run,
   elapsed,
-  notify,
   isPlaybackActive = false,
 }: {
   run: BookingRun;
   elapsed: number | null;
-  notify: (message: string) => void;
   isPlaybackActive?: boolean;
 }) {
   const response = run.phase === 'result' ? run.response : null;
@@ -20,11 +21,13 @@ export function ExecutionSummary({
   async function copyId() {
     try {
       await navigator.clipboard.writeText(bookingId);
-      notify('Booking ID copied');
+      toast.success('Booking ID copied to clipboard');
     } catch {
-      notify('Could not copy automatically. Select the booking ID to copy it manually.');
+      toast.error('Could not copy automatically. Select the booking ID to copy it manually.');
     }
   }
+
+  const isTest = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'test';
 
   return (
     <section className="execution-card card" aria-label="Execution summary">
@@ -50,7 +53,14 @@ export function ExecutionSummary({
           {response.steps_completed.length ? (
             <ol className="execution-list" aria-label="Completed actions">
               {response.steps_completed.map((step, index) => (
-                <li className="execution-row" key={`${step}-${index}`} data-tone="mint">
+                <motion.li
+                  className="execution-row"
+                  key={`${step}-${index}`}
+                  data-tone="mint"
+                  initial={isTest ? false : { opacity: 0, x: -6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.22, delay: index * 0.04 }}
+                >
                   <span className="execution-rail" aria-hidden="true">
                     <span />
                   </span>
@@ -60,7 +70,7 @@ export function ExecutionSummary({
                     <small>{step}</small>
                   </span>
                   <span className="execution-tag">COMPLETED</span>
-                </li>
+                </motion.li>
               ))}
             </ol>
           ) : (
@@ -75,7 +85,14 @@ export function ExecutionSummary({
               </div>
               <ol className="execution-list" aria-label="Executed compensations">
                 {response.compensations_executed.map((step, index) => (
-                  <li className="execution-row" key={`${step}-${index}`} data-tone="coral">
+                  <motion.li
+                    className="execution-row"
+                    key={`${step}-${index}`}
+                    data-tone="coral"
+                    initial={isTest ? false : { opacity: 0, x: 6 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.22, delay: index * 0.05 }}
+                  >
                     <span className="execution-rail" aria-hidden="true">
                       <span />
                     </span>
@@ -85,7 +102,7 @@ export function ExecutionSummary({
                       <small>{step}</small>
                     </span>
                     <span className="execution-tag">EXECUTED</span>
-                  </li>
+                  </motion.li>
                 ))}
               </ol>
             </>

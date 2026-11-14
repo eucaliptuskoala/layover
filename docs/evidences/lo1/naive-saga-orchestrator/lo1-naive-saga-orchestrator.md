@@ -13,12 +13,14 @@ In distributed microservice architectures with true database-per-service isolati
 To evaluate whether a heavy distributed orchestrator (like Temporal) is actually necessary, I needed an empirical baseline: **Version A (In-Memory Saga Coordinator)**.
 
 A common engineering trap when implementing Sagas is to write an in-memory script:
+
 * Forward requests are dispatched via standard HTTP calls (`Flight -> Hotel -> Payment`).
 * Compensations are registered in an in-memory LIFO (Last-In, First-Out) list in a `try/except` block.
 * No external event-sourcing database or persistent state machine is used.
 
 While this approach works during clean business logic rejections (e.g. HTTP 400 Insufficient Funds), it suffers from a fatal vulnerability: **volatile process memory**.
 If the orchestrator process terminates unexpectedly (`kill -9`, Out-Of-Memory, host reboot, or crash) halfway through execution:
+
 1. The in-memory compensation stack in RAM is destroyed instantly.
 2. Previously committed holds (`RESERVED`) in upstream databases remain stranded forever.
 3. The system possesses zero automated recovery upon restart.
@@ -43,7 +45,8 @@ graph TD
     NaiveOrch -->|POST /charge| Payment["Payment Service (:8003)<br/>payment.db"]
 ```
 
-### Key Architectural Decisions:
+### Key Architectural Decisions
+
 1. **Symmetric Failure Domain:** By deploying the Naive Orchestrator in its own Docker container (`layover-naive` on port `8004`), it can be stopped or killed (`docker kill layover-naive`) independently without taking down the API Gateway or the Web UI.
 2. **Stateless Gateway Facade:** The Gateway remains 100% stateless, selecting between Temporal and Naive at runtime via the **Strategy Pattern** (`SagaOrchestratorStrategy`).
 3. **Identical API Contracts:** Both orchestrators consume the exact same microservice REST contracts (`/reserve`, `/confirm`, `/cancel`, `/charge`, `/refund`) and return unified `BookingResponse` payloads to the client.
@@ -101,6 +104,7 @@ while compensations:
 ### 2 Autonomous Microservice Layer (`main.py`)
 
 I exposed the coordinator via a lightweight FastAPI application:
+
 * `GET /health` — Provides healthcheck telemetry for Docker Compose orchestration.
 * `POST /book` — Accepts `NaiveSagaInput`, executes the pipeline in memory, and returns `NaiveSagaResult`.
 
@@ -171,16 +175,21 @@ orchestrators/naive/tests/test_naive_saga.py::test_concurrent_runs_on_one_coordi
 ### 2 Empirical Proof of State Loss (Live Crash Test)
 
 During the `SLOW_DEMO` scenario (4-second pause between steps):
+
 1. The booking initiates: Flight is reserved (`RESERVED` in `flight.db`).
 2. The orchestrator container is killed mid-transaction:
+
    ```bash
    docker kill layover-naive
    ```
+
 3. Database inspection reveals the catastrophic failure mode:
+
    ```bash
    sqlite3 data/flight.db "SELECT booking_id, status FROM reservations;"
    # Output: bk-8e80d7a9|RESERVED
    ```
+
 4. When `docker start layover-naive` restarts the container, the memory is completely clean. The system has **no record of the booking**, and the flight seat remains locked indefinitely. This provides concrete evidence supporting the research hypothesis.
 
 ---

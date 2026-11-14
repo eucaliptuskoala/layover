@@ -2,20 +2,21 @@
 
 ## Introduction
 
-> Architected and implemented a high-performance React 19 single-page application (`ui/`) as an external client adapter for **Software Engineering (LO1)**. Designed with TypeScript strict type boundaries, finite state machine visualization, live telemetry timers, and deep-linking into Temporal Web UI, providing an empirical control surface to trigger distributed Saga executions and observe fault tolerance in real time.
+> Architected and implemented a React single-page application (`ui/`) as an external client adapter for **Software Engineering (LO1)**. Designed with TypeScript strict type boundaries, finite state machine visualization, live telemetry timers, and deep-linking into Temporal Web UI, providing an empirical control surface to trigger distributed Saga executions and observe fault tolerance in real time.
 
 ---
 
 ## Context and the Problem
 
-In distributed systems research, evaluating architectural trade-offs (such as in-memory rollbacks versus durable event-driven execution) requires observing system dynamics under live conditions. 
+In distributed systems research, evaluating architectural trade-offs (such as in-memory rollbacks versus durable event-driven execution) requires observing system dynamics under live conditions.
 
 Interacting with distributed microservices solely via command-line utilities (`curl`) or Postman introduces significant cognitive friction:
+
 1. **Asynchronous Blindness:** CLI tools wait synchronously or fail silently on network timeouts without displaying which intermediate steps succeeded or were compensated.
 2. **Topology Decoupling:** Testing multi-service failures (e.g., flight reserved, hotel failing, compensation in reverse) requires correlating database queries across three distinct SQLite files (`flight.db`, `hotel.db`, `payment.db`).
 3. **Manual Parameter Coordination:** Altering booking parameters (customer balance, hotel room pricing, flight seats, intentional latency delays) manually in JSON payloads is error-prone.
 
-To satisfy **Software Engineering (LO1)**, I engineered an autonomous, production-grade frontend client that treats the backend as a black-box API Gateway, visualizes distributed state transitions deterministically, and controls fault-injection parameters through typed contracts.
+To satisfy **Software Engineering (LO1)**, I engineered an autonomous frontend client that treats the backend as a black-box API Gateway, visualizes distributed state transitions deterministically, and controls fault-injection parameters through typed contracts.
 
 ---
 
@@ -51,7 +52,8 @@ graph TD
     State --> Topology
 ```
 
-### Architectural Principles Applied:
+### Architectural Principles Applied
+
 1. **Zero Domain Knowledge Leaks:** The UI communicates exclusively with the API Gateway on port `8000`. It has no knowledge of internal database structures, gRPC connections, or microservice ports (`8001`, `8002`, `8003`, `8004`).
 2. **Mirror Contract Boundaries:** Request and response interfaces in `contracts.ts` mirror backend Pydantic models with strict TypeScript types, enforcing end-to-end contract safety.
 3. **Deterministic State Reflection:** The UI does not infer business outcomes. It renders the exact state reported by the orchestrator (`steps_completed`, `compensations_executed`, `status`).
@@ -119,6 +121,7 @@ function resolveState(serviceName: string, outcome: BookingResponse | null, isPe
 ```
 
 The component renders visual cues:
+
 * **Green pulse:** Step succeeded and committed forward.
 * **Amber / Orange badge:** Step was rolled back via compensating action (e.g., `cancel_hotel`, `refund_payment`).
 * **Red badge:** Point of failure where transaction was aborted.
@@ -206,7 +209,8 @@ cd ui && npm test
    Duration  1.48s
 ```
 
-### Verified Behaviors:
+### Verified Behaviors
+
 1. **Contract Parsing:** Validates that malformed responses or HTTP 500 errors from the Gateway do not crash the React rendering tree (`ErrorBoundary`).
 2. **Scenario Selection:** Switching between `happy_path`, `fail_hotel`, `fail_payment`, and `slow_demo` correctly updates expected totals and request payloads.
 3. **State Machine Transitions:** Confirms that `ServiceTopology` properly maps `steps_completed` and `compensations_executed` to their respective status states.

@@ -258,61 +258,10 @@
   .service-node[data-state='idle'] .node-status {
     color: var(--color-faint);
   }
-  .topology-link {
-    position: relative;
-    flex: 0 0 54px;
-    display: grid;
-    place-items: center;
-    align-self: center;
-    height: 44px;
-    color: var(--color-line-strong);
-    margin: 0 2px;
-  }
-  .topology-link-line {
-    position: absolute;
-    left: 2px;
-    right: 2px;
-    top: 50%;
-    height: 1px;
-    transform: translateY(-50%);
-    background: repeating-linear-gradient(90deg, #d8e3db 0 3px, transparent 3px 7px);
-  }
-  .topology-link-dot {
-    position: absolute;
-    left: 2%;
-    top: 50%;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--color-emerald-600);
-    opacity: 0;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.16);
-    pointer-events: none;
-  }
-  .topology-link.is-live .topology-link-line {
-    background: repeating-linear-gradient(90deg, var(--color-emerald-600) 0 4px, transparent 4px 9px);
-    animation: flowX 0.75s linear infinite;
-  }
-  .topology-link.is-live .topology-link-dot {
-    opacity: 1;
-    animation: travelX 1.35s ease-in-out infinite;
-  }
-  .topology-link.is-reverse .topology-link-line {
-    background: repeating-linear-gradient(90deg, var(--color-rose-600) 0 4px, transparent 4px 9px);
-    animation: flowX 0.6s linear infinite reverse;
-  }
-  .topology-link.is-reverse .topology-link-dot {
-    opacity: 1;
-    background: var(--color-rose-600);
-    box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.16);
-    animation: travelX 1.05s ease-in-out infinite reverse;
-  }
-
   .service-node {
     position: relative;
     overflow: hidden;
-    transition: border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+    transition: border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
   }
   .service-node::after {
     content: '';
@@ -803,9 +752,6 @@
   .node-address {
     display: none;
   }
-  .topology-connector {
-    flex-basis: 30px;
-  }
 }
 @media (max-width: 900px) {
   .processing-grid {
@@ -852,12 +798,6 @@
   }
   .topology-segment {
     flex-direction: column;
-  }
-  .topology-connector {
-    flex: 0 0 22px;
-    width: 1px;
-    margin: 0;
-    background: repeating-linear-gradient(180deg, #d8e3db 0 3px, transparent 3px 7px);
   }
   .node-address {
     display: inline;
@@ -917,11 +857,6 @@
 /* ============================================================
    Layover Topology & Processing Animations
    ============================================================ */
-@keyframes txPulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.55; transform: scale(0.82); }
-}
-
 @keyframes badgePulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(0.75); }
@@ -930,30 +865,5 @@
 @keyframes shimmer {
   from { background-position: 190% 0; }
   to { background-position: -90% 0; }
-}
-
-@keyframes flowX {
-  from { background-position: 0 0; }
-  to { background-position: 18px 0; }
-}
-
-@keyframes travelX {
-  0% { left: 2%; opacity: 0; }
-  12% { opacity: 1; }
-  88% { opacity: 1; }
-  100% { left: 98%; opacity: 0; }
-}
-
-@keyframes nodeShake {
-  0%, 100% { transform: translateX(0); }
-  22% { transform: translateX(-3px); }
-  44% { transform: translateX(3px); }
-  66% { transform: translateX(-2px); }
-  82% { transform: translateX(2px); }
-}
-
-@keyframes ringPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.18); }
-  50% { box-shadow: 0 0 0 6px rgba(217, 119, 6, 0); }
 }
 
