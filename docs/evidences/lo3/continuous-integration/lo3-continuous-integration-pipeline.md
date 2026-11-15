@@ -33,7 +33,7 @@ flowchart TD
     Trigger["<b>Git Push / Pull Request</b><br/>Branch: main"] --> CI["<b>GitHub Actions CI Pipeline</b><br/>Ubuntu-Latest Workflows"]
 
     CI --> BackendMatrix["<b>Job 1: verify-backend (Matrix)</b><br/>Python 3.12 + Astral uv"]
-    CI --> FrontendJob["<b>Job 2: verify-frontend</b><br/>Node.js 20 + npm"]
+    CI --> FrontendJob["<b>Job 2: verify-frontend</b><br/>Node.js 22 + npm"]
 
     BackendMatrix --> B1["<b>flight</b> (10 tests, ruff, docker)"]
     BackendMatrix --> B2["<b>hotel</b> (10 tests, ruff, docker)"]
@@ -143,7 +143,7 @@ To eliminate frontend regressions, I added a dedicated Node.js job executing ESL
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: ui/package-lock.json
       - run: npm ci
