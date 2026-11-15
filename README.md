@@ -11,7 +11,7 @@ When building distributed systems, partial failures are inevitable: network time
 
 **Layover** is a study comparing two approaches to multi-service distributed workflows:
 
-1. **In-Memory Saga Baseline:** Direct HTTP coordination (`Flight -> Hotel -> Payment`) maintaining an in-memory LIFO compensation stack in `try/except`.
+1. **Vanilla In-Memory Saga Baseline:** Direct HTTP coordination (`Flight -> Hotel -> Payment`) maintaining an in-memory LIFO compensation stack in `try/except` (labelled `naive` in the codebase).
 2. **Durable Saga (Temporal):** Orchestrated execution implementing the **Saga pattern** backed by a persistent event-sourcing engine with automated retries and durable compensating rollbacks.
 
 Full personal development plan, learning outcomes, and research cycle details can be found in [docs/pdp.md](docs/pdp.md).
@@ -36,8 +36,8 @@ The project consists of three independent microservices following the **database
                     +---------------+---------------+
                     | (HTTP :8004)                  | (gRPC :7233)
                     v                               v
-         [ Naive Orchestrator ]           [ Temporal Cluster ]
-         (Standalone microservice)        (Durable History Engine)
+         [ Vanilla Orchestrator ]          [ Temporal Cluster ]
+         (layover-naive :8004)            (Durable History Engine)
          (In-Memory LIFO Stack)                     |
                     |                     [ Temporal Worker ]
                     |                     (Workflow Activities)
@@ -62,7 +62,7 @@ The project consists of three independent microservices following the **database
 | **Flight Service** | `8001` | `flight.db` (SQLite) | `POST /reserve`, `POST /confirm`, `POST /cancel`, `GET /health` |
 | **Hotel Service** | `8002` | `hotel.db` (SQLite) | `POST /reserve`, `POST /confirm`, `POST /cancel`, `GET /health` |
 | **Payment Service** | `8003` | `payment.db` (SQLite) | `POST /charge`, `POST /refund`, `GET /health` |
-| **Naive Orchestrator** | `8004` | In-Memory RAM | `POST /book`, `GET /health` |
+| **Vanilla Orchestrator** | `8004` | In-Memory RAM | `POST /book`, `GET /health` *(container: `layover-naive`)* |
 | **Temporal Cluster** | `7233`<br/>`8233` | SQLite (Dev) | gRPC Engine (`:7233`) and Web UI Dashboard (`:8233`) |
 | **Temporal Worker** | None | Event Log | Consumes workflows & activities from `booking-task-queue` |
 | **React UI Dashboard** | `5173` | Local Storage | Interactive developer sandbox & topology visualizer |
@@ -71,7 +71,7 @@ The project consists of three independent microservices following the **database
 
 The API Gateway (`POST /api/bookings`) accepts `orchestrator: 'temporal' | 'naive'`. The gateway selects `TemporalSagaStrategy` or `NaiveSagaStrategy` from `STRATEGIES`:
 
-- **Naive (`layover-naive` on port `:8004`):** An autonomous microservice executing steps sequentially (`reserve_flight → reserve_hotel → charge_payment → confirm_flight → confirm_hotel`). It registers compensations in an in-memory LIFO stack in process RAM. If an error occurs (such as HTTP 400 Insufficient Funds), it executes compensations in reverse order (`cancel_hotel → cancel_flight`). However, if the `layover-naive` container is terminated mid-flight (`docker kill layover-naive`), the compensation stack in RAM is destroyed, leaving orphaned holds in SQLite.
+- **Vanilla In-Memory Baseline (`layover-naive` on port `:8004`):** An autonomous microservice executing steps sequentially (`reserve_flight → reserve_hotel → charge_payment → confirm_flight → confirm_hotel`). It registers compensations in an in-memory LIFO stack in process RAM. If an error occurs (such as HTTP 400 Insufficient Funds), it executes compensations in reverse order (`cancel_hotel → cancel_flight`). However, if the `layover-naive` container is terminated mid-flight (`docker kill layover-naive`), the compensation stack in RAM is destroyed, leaving orphaned holds in SQLite.
 - **Temporal (`layover-worker` via `layover-temporal`):** Orchestrated execution backed by Temporal's append-only event history. Each step and compensation is an isolated activity with exponential retries. If the worker process is killed mid-booking, the pending workflow is preserved in Temporal Server and automatically resumes upon worker restart.
 
 ---
@@ -261,9 +261,9 @@ layover/
 │   ├── feedback.md            # Peer knowledge sharing feedback notes
 │   └── evidences/             # Portfolio evidence documents (LO1, LO2, LO3, LO4 ADR, LO5)
 │       ├── lo1/               # Microservices architecture, UI, and orchestrators
-│       ├── lo2/               # 120-test multi-tier quality suite & chaos testing v2
-│       ├── lo3/               # Docker containerization v2 & CI/CD pipeline
-│       ├── lo4/               # Interim Architectural Decision Record (ADR)
+│       ├── lo2/               # 120-test multi-tier quality suite & chaos testing
+│       ├── lo3/               # 7-container Docker ecosystem & CI/CD matrix pipeline
+│       ├── lo4/               # Architectural Decision Record (ADR: In-Memory vs. Temporal)
 │       └── lo5/               # Peer feedback analysis & Personal Leadership reflection
 │
 ├── docker-compose.yml         # Container orchestration with healthchecks & volumes

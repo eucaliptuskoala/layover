@@ -159,7 +159,7 @@ export function SandboxPanel({
                 onChange={() => onSelectOrchestrator('naive')}
               />
               <span>
-                In-memory <em>baseline</em>
+                Vanilla <em>In-memory</em>
               </span>
             </label>
             <label
@@ -217,7 +217,7 @@ export function SandboxPanel({
         </p>
         <p className="sandbox-note text-[10px]">
           {selectedOrchestrator === 'naive'
-            ? 'In-memory: single HTTP attempts and volatile rollback state. Process crash destroys compensation stack.'
+            ? 'Vanilla: single HTTP attempts and volatile rollback state. Process crash destroys compensation stack.'
             : 'Temporal: durable workflow history and activity retries. Recovers automatically upon worker restart.'}{' '}
           Simulate container crashes via docker kill during Chaos pause.
         </p>

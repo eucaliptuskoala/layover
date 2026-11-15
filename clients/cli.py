@@ -8,14 +8,14 @@ import asyncio
 import sys
 from pathlib import Path
 
-# Ensure gateway layer is on import path
+# Ensure gateway layer is on import path for standalone execution
 GATEWAY_DIR = Path(__file__).resolve().parent.parent / 'gateway'
 if str(GATEWAY_DIR) not in sys.path:
     sys.path.insert(0, str(GATEWAY_DIR))
 
-from dispatcher import dispatch_booking
-from health import check_all_services
-from models import BookingRequest, OrchestratorType, ScenarioType
+from dispatcher import dispatch_booking  # noqa: E402
+from health import check_all_services  # noqa: E402
+from models import BookingRequest, OrchestratorType, ScenarioType  # noqa: E402
 
 
 def print_banner(title: str) -> None:

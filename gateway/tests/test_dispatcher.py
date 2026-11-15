@@ -1,6 +1,5 @@
 """Exercise the Strategy context itself, not a mocked dispatch_booking endpoint."""
 
-import json
 from unittest.mock import AsyncMock, patch
 
 import httpx

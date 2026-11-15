@@ -110,7 +110,7 @@ export function ExecutionSummary({
           <p className="execution-disclaimer">
             Per-step timestamps and durations are not included in the gateway response.{' '}
             {run.request.orchestrator === 'naive'
-              ? 'The in-memory engine has no durable execution history; review reported errors and service state.'
+              ? 'The vanilla in-memory engine has no durable execution history; review reported errors and service state.'
               : 'Open Temporal for the full history.'}
           </p>
         </>

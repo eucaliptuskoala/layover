@@ -1,8 +1,8 @@
-# Microservices Architecture, Database Isolation & Domain Layering
+# Microservices Architecture, Database Isolation & Contract Testing
 
 ## Introduction
 
-> Built three autonomous FastAPI microservices (Flight, Hotel, Payment) using the Database-per-Service pattern with embedded SQLite, a 3-tier architecture, and Compare-and-Swap atomic persistence.
+> Built three autonomous FastAPI microservices (Flight, Hotel, Payment) with isolated SQLite databases and a 3-tier architecture, establishing idempotent forward and compensating REST contracts validated by 32 automated unit and integration tests for **Software Engineering (LO1)** and **Software Quality (LO2)**.
 
 ---
 
@@ -16,7 +16,7 @@ In a microservices architecture, each service owns its own database. There is no
 
 If a customer tries to book a trip, the flight might be reserved and the hotel room held, but if the payment call times out or fails due to insufficient balance, the system enters an inconsistent state. Without explicit forward actions (`/reserve`, `/charge`) and reliable compensating actions (`/cancel`, `/refund`), hotels and airlines hold inventory indefinitely, and customers risk getting charged for cancelled trips.
 
-Before I could introduce any workflow coordinator (like a sequential script or a workflow engine like Temporal), I needed to build the three underlying services and establish clean architectural boundaries, physical database isolation, and atomic state machines.
+Before I could introduce any workflow coordinator (like a sequential script or a workflow engine like Temporal), I needed to build the three underlying services and prove that their API contracts and state machines could reliably handle both forward reservations and rollback compensations.
 
 ---
 
@@ -30,7 +30,44 @@ I designed these three services strictly around the **Database-per-Service** arc
 
 No service has direct database access to another service's tables. Communication happens exclusively over HTTP REST contracts.
 
-> [Attach: Architecture diagram showing Flight, Hotel, and Payment microservices, their isolated SQLite databases, and communication via HTTP REST contracts]
+```mermaid
+flowchart TD
+    subgraph OrchestratorTier ["⚙️ Orchestrator Tier (Cycles 3 & 4)"]
+        Orch["<b>Saga Coordinator</b><br/>Vanilla Baseline OR Temporal Workflow"]
+    end
+
+    subgraph ServicesTier ["⚡ Autonomous Microservices (FastAPI)"]
+        Flight["<b>Flight Service (:8001)</b><br/><code>services/flight/</code>"]
+        Hotel["<b>Hotel Service (:8002)</b><br/><code>services/hotel/</code>"]
+        Payment["<b>Payment Service (:8003)</b><br/><code>services/payment/</code>"]
+    end
+
+    subgraph DataTier ["🗄️ Isolated Persistence (Database-per-Service)"]
+        FlightDB[("<b>flight.db</b><br/>Isolated SQLite")]
+        HotelDB[("<b>hotel.db</b><br/>Isolated SQLite")]
+        PaymentDB[("<b>payment.db</b><br/>Isolated SQLite")]
+    end
+
+    Orch -->|POST /reserve<br/>POST /cancel| Flight
+    Orch -->|POST /reserve<br/>POST /cancel| Hotel
+    Orch -->|POST /charge<br/>POST /refund| Payment
+
+    Flight -->|Local I/O only| FlightDB
+    Hotel -->|Local I/O only| HotelDB
+    Payment -->|Local I/O only| PaymentDB
+
+    classDef orchNode fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d;
+    classDef serviceNode fill:#ffffff,stroke:#64748b,stroke-width:1.5px,color:#0f172a;
+    classDef dbNode fill:#f8fafc,stroke:#0284c7,stroke-width:1.5px,color:#0369a1;
+
+    class Orch orchNode;
+    class Flight,Hotel,Payment serviceNode;
+    class FlightDB,HotelDB,PaymentDB dbNode;
+
+    style OrchestratorTier fill:#f8faf8,stroke:#86efac,stroke-width:1.5px,stroke-dasharray: 4 4;
+    style ServicesTier fill:#f8faf8,stroke:#cbd5e1,stroke-width:1.5px,stroke-dasharray: 4 4;
+    style DataTier fill:#f8faf8,stroke:#7dd3fc,stroke-width:1.5px,stroke-dasharray: 4 4;
+```
 
 To bind these services together without coupling their code, I established a clear data contract:
 
@@ -40,19 +77,24 @@ To bind these services together without coupling their code, I established a cle
   * Hotel: `POST /reserve` $\leftrightarrow$ `POST /cancel`
   * Payment: `POST /charge` $\leftrightarrow$ `POST /refund`
 
-This clean separation ensures that the upcoming coordinators in Cycle 3 (Temporal) and Cycle 4 (Naive baseline) interact with the exact same API contracts.
+This clean separation ensures that the upcoming coordinators in Cycle 3 (Temporal) and Cycle 4 (Vanilla baseline) interact with the exact same API contracts.
 
 ---
 
 ## Progressive Engineering Steps
 
-I developed the services across three distinct engineering steps:
+I developed the services and their validation harness across four distinct steps:
 
 ### 1 Microservice Directory & Environment Isolation
 
 Instead of keeping all three services in a single monolithic Python project with shared dependencies, I separated each service into its own folder with its own `pyproject.toml` and virtual environment managed by `uv`.
 
-> [Attach: Screenshot of the project directory tree showing isolated folders for services/flight, services/hotel, and services/payment with their own virtual environments and manifests]
+```text
+services/
+├── flight/   # pyproject.toml, .venv, main.py, service.py, database.py, tests/
+├── hotel/    # pyproject.toml, .venv, main.py, service.py, database.py, tests/
+└── payment/  # pyproject.toml, .venv, main.py, service.py, database.py, tests/
+```
 
 This guaranteed that dependencies remain isolated, simulating real independent services that can be updated, tested, and containerized on their own.
 
@@ -63,9 +105,13 @@ Initially, state transitions could be checked in Python before updating the data
 
 However, this creates a classic Time-of-Check to Time-of-Use (TOCTOU) race condition. If two network requests (such as a timeout retry and an intentional cancellation) hit the service at the same millisecond, both could read `RESERVED` and overwrite each other (Lost Update anomaly).
 
-I replaced Python-level checks with atomic SQL Compare-and-Swap queries in `database.py`.
+I replaced Python-level checks with atomic SQL Compare-and-Swap queries in `database.py`:
 
-> [Attach: Code snippet of the update_status_atomic method in database.py showing the atomic UPDATE query with WHERE booking_id = ? AND status = ?]
+```sql
+UPDATE flight_bookings 
+SET status = ? 
+WHERE booking_id = ? AND status = ?;
+```
 
 If the database modifies 1 row, the transition is atomic and valid. If it modifies 0 rows, the state has already moved, allowing the service to inspect the record and return an idempotent response or a conflict.
 
@@ -73,15 +119,50 @@ If the database modifies 1 row, the transition is atomic and valid. If it modifi
 
 Putting all request validation, database queries, and business logic into route handlers leads to "Fat Controllers", which makes code difficult to test in isolation and maintain.
 
-I structured each service into three distinct layers:
+I refactored each service into three distinct layers:
 
 1. **Controller (`main.py`):** Responsible solely for HTTP transport, JSON serialization via Pydantic, and mapping domain exceptions to HTTP status codes (`201 Created`, `200 OK`, `400 Bad Request`, `404 Not Found`, `409 Conflict`).
 2. **Service Layer (`service.py`):** Holds pure business rules, validates state transitions, and enforces idempotency rules.
 3. **Persistence Layer (`database.py`):** Encapsulates SQL queries and connection handling using `aiosqlite`.
 
+```mermaid
+flowchart LR
+    Client["<b>HTTP Client / Orchestrator</b>"] -->|JSON Request| Router["<b>Controller (main.py)</b><br/>FastAPI Routing & Validation"]
+    Router -->|Validated DTO| Service["<b>Service Layer (service.py)</b><br/>Business Rules & Idempotency"]
+    Service -->|Atomic CAS Query| Database["<b>Persistence (database.py)</b><br/>aiosqlite Connection Pool"]
+    Database -->|Single-file Disk I/O| DBFile[("<b>&lt;service&gt;.db</b><br/>Isolated SQLite")]
+
+    Router -.->|HTTP 200/201/400/409| Client
+
+    classDef clientNode fill:#f8fafc,stroke:#94a3b8,stroke-width:1.5px,color:#0f172a;
+    classDef routerNode fill:#eff6ff,stroke:#3b82f6,stroke-width:1.5px,color:#1e3a8a;
+    classDef serviceNode fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d;
+    classDef dbNode fill:#faf5ff,stroke:#a855f7,stroke-width:1.5px,color:#581c87;
+    classDef fileNode fill:#f8fafc,stroke:#0284c7,stroke-width:1.5px,color:#0369a1;
+
+    class Client clientNode;
+    class Router routerNode;
+    class Service serviceNode;
+    class Database dbNode;
+    class DBFile fileNode;
+```
+
 To prevent databases from cluttering the root folder when services are launched from different directories, I anchored database paths using `Path(__file__).resolve().parent / '<service>.db'`.
 
-> [Attach: Screenshot or snippet of main.py and service.py showing the clean separation between HTTP route handlers and domain logic]
+### 4 Automated Testing Harness (32 Tests)
+
+To prove that the services behave correctly before connecting them to an orchestrator, I wrote a suite of unit and integration tests using `pytest`, `pytest-asyncio`, and `httpx.AsyncClient`.
+
+The tests cover:
+
+* Basic health checks (`/health`).
+* Happy path forward bookings (`/reserve`, `/charge`).
+* Account balance deductions and atomic guards rejecting insufficient funds (`400 Bad Request`).
+* Compensating rollbacks (`/cancel`, `/refund`).
+* Duplicate calls verifying that retried cancellations and refunds do not crash or double-refund money.
+* Conflict guards returning `409 Conflict` if someone attempts to confirm an already cancelled reservation.
+
+Every test uses an isolated temporary database (`tmp_path`) so test runs are completely repeatable and never leave leftover files behind.
 
 ---
 
@@ -106,8 +187,6 @@ I implemented idempotency guards in `service.py`:
 * Calling `/cancel` on an already cancelled booking returns `200 OK` with the existing record.
 * Calling `/refund` on an already refunded payment returns `200 OK` and does **not** credit the customer's balance a second time.
 
-> [Attach: Code snippet of the cancel method in service.py showing the idempotency check returning cleanly if status is already CANCELLED]
-
 ### Atomic Balance Protection in Payment Service
 
 In the Payment service, handling money requires strict consistency.
@@ -116,10 +195,7 @@ I designed the `/charge` operation to check available funds and subtract the amo
 
 ---
 
-## From Proof of Concept to Next Cycle (Cycle 3: Temporal Saga)
+## Reflection & Learning Outcome Justification
 
-With Cycle 2 complete, all three microservices are implemented, decoupled, and architected with clean separation of concerns.
-
-> [Attach: Screenshot of the terminal verifying service startup and health checks for Flight, Hotel, and Payment]
-
-This provides the exact architectural foundation required for **Cycle 3 (Temporal Workflow & Compensation)**. Because the REST contracts and compensating actions are fully decoupled and idempotent, I can now focus entirely on implementing the Temporal Saga orchestrator without worrying whether the microservices themselves are dropping data or crashing on retries.
+* **Software Engineering (LO1):** Designed and implemented three autonomous FastAPI microservices strictly adhering to the Database-per-Service pattern with Compare-and-Swap atomic queries and layered domain separation (`Router -> Service -> Database`).
+* **Software Quality (LO2):** Established idempotent REST contracts for forward and compensating actions, thoroughly validated through 32 automated unit and integration tests with isolated temporary SQLite databases.

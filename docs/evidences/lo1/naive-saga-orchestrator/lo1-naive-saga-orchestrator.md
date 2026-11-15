@@ -1,16 +1,19 @@
-# Naive In-Memory Saga Orchestrator & Volatile Failure Analysis
+# Vanilla In-Memory Saga Orchestrator & Volatile Failure Analysis
 
 ## Introduction
 
-> Designed, implemented, and verified an autonomous In-Memory Saga Orchestrator (`orchestrators/naive/`) as the baseline counterpart to Temporal for **Software Engineering (LO1)**. Built with ad-hoc LIFO rollbacks in process memory, isolated on port `8004`, and integrated into the Gateway via the Strategy Pattern to empirically demonstrate volatile state loss during partial failure.
+> Designed, implemented, and verified an autonomous Vanilla In-Memory Saga Orchestrator (`orchestrators/naive/`) as the baseline counterpart to Temporal for **Software Engineering (LO1)**. Built with pure application-level LIFO rollbacks in process memory, isolated on port `8004`, and integrated into the Gateway via the Strategy Pattern to empirically demonstrate volatile state loss during partial failure.
 
 ---
 
 ## Context and the Problem
 
+> [!NOTE] Note on Terminology
+> Throughout the codebase and Docker service configuration, this implementation is labelled `naive` (e.g. directory `orchestrators/naive/`, container `layover-naive`, and strategy parameter `'naive'`) following the standard Computer Science convention for baseline reference models (analogous to *Naive Bayes*). From an architectural perspective, this represents a production-grade **Vanilla In-Memory Saga Orchestrator (Ad-Hoc Saga Coordinator)** built with pure Python without external workflow engine dependencies.
+
 In distributed microservice architectures with true database-per-service isolation, multi-service transactions cannot rely on two-phase commits (2PC) or ACID database locks. The industry-standard approach is the **Saga Pattern**: executing sequential forward steps and triggering compensating rollbacks if any downstream step fails.
 
-To evaluate whether a heavy distributed orchestrator (like Temporal) is actually necessary, I needed an empirical baseline: **Version A (In-Memory Saga Coordinator)**.
+To evaluate whether a heavy distributed orchestrator (like Temporal) is actually necessary, I needed an empirical baseline: **Version A (Vanilla In-Memory Saga Coordinator)**.
 
 A common engineering trap when implementing Sagas is to write an in-memory script:
 
@@ -31,24 +34,36 @@ To prove this hypothesis for **Software Engineering (LO1)**, I built a dedicated
 
 ## Systems Thinking: How It Fits the Project
 
-Rather than burying the naive coordinator inside the API Gateway as an internal library, I architected `orchestrators/naive/` as an **autonomous microservice**:
+Rather than burying the vanilla coordinator inside the API Gateway as an internal library, I architected `orchestrators/naive/` as an **autonomous microservice**:
 
 ```mermaid
-graph TD
-    Client["Client (Web UI / CLI)"] -->|HTTP :8000| Gateway["API Gateway (Stateless Strategy Dispatcher)"]
+flowchart TD
+    Client["<b>Client (Web UI / CLI)</b>"] -->|HTTP :8000| Gateway["<b>API Gateway Facade</b><br/>Stateless Strategy Dispatcher"]
 
-    Gateway -->|Strategy: Naive HTTP :8004| NaiveOrch["Naive Saga Orchestrator (:8004)<br/>[Volatile RAM Compensation Stack]"]
-    Gateway -->|Strategy: Temporal gRPC| TemporalWorker["Temporal Worker (layover-worker)<br/>[Durable Event History]"]
+    Gateway -->|Strategy: Vanilla HTTP :8004| VanillaOrch["<b>Vanilla Saga Orchestrator (:8004)</b><br/>Volatile RAM Stack (~24MB)"]
+    Gateway -->|Strategy: Temporal gRPC| TemporalWorker["<b>Temporal Worker (layover-worker)</b><br/>Durable Event History (~240MB)"]
 
-    NaiveOrch -->|POST /reserve| Flight["Flight Service (:8001)<br/>flight.db"]
-    NaiveOrch -->|POST /reserve| Hotel["Hotel Service (:8002)<br/>hotel.db"]
-    NaiveOrch -->|POST /charge| Payment["Payment Service (:8003)<br/>payment.db"]
+    VanillaOrch -->|POST /reserve| Flight["<b>Flight Service (:8001)</b><br/>flight.db"]
+    VanillaOrch -->|POST /reserve| Hotel["<b>Hotel Service (:8002)</b><br/>hotel.db"]
+    VanillaOrch -->|POST /charge| Payment["<b>Payment Service (:8003)</b><br/>payment.db"]
+
+    classDef clientNode fill:#ffffff,stroke:#64748b,stroke-width:1.5px,color:#0f172a;
+    classDef gatewayNode fill:#eff6ff,stroke:#3b82f6,stroke-width:1.5px,color:#1e3a8a;
+    classDef vanillaNode fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e;
+    classDef temporalNode fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d;
+    classDef serviceNode fill:#ffffff,stroke:#64748b,stroke-width:1.5px,color:#0f172a;
+
+    class Client clientNode;
+    class Gateway gatewayNode;
+    class VanillaOrch vanillaNode;
+    class TemporalWorker temporalNode;
+    class Flight,Hotel,Payment serviceNode;
 ```
 
 ### Key Architectural Decisions
 
-1. **Symmetric Failure Domain:** By deploying the Naive Orchestrator in its own Docker container (`layover-naive` on port `8004`), it can be stopped or killed (`docker kill layover-naive`) independently without taking down the API Gateway or the Web UI.
-2. **Stateless Gateway Facade:** The Gateway remains 100% stateless, selecting between Temporal and Naive at runtime via the **Strategy Pattern** (`SagaOrchestratorStrategy`).
+1. **Symmetric Failure Domain:** By deploying the Vanilla Orchestrator in its own Docker container (`layover-naive` on port `8004`), it can be stopped or killed (`docker kill layover-naive`) independently without taking down the API Gateway or the Web UI.
+2. **Stateless Gateway Facade:** The Gateway remains 100% stateless, selecting between Temporal and Vanilla at runtime via the **Strategy Pattern** (`SagaOrchestratorStrategy`).
 3. **Identical API Contracts:** Both orchestrators consume the exact same microservice REST contracts (`/reserve`, `/confirm`, `/cancel`, `/charge`, `/refund`) and return unified `BookingResponse` payloads to the client.
 
 ---
@@ -149,7 +164,7 @@ class NaiveSagaStrategy(SagaOrchestratorStrategy):
 
 ### 1 Automated Unit & Integration Tests (18 Passed)
 
-I validated the Naive Orchestrator using `pytest` and `httpx.MockTransport`, asserting forward execution order, LIFO rollback order, and error handling across 18 distinct test cases:
+I validated the Vanilla Orchestrator using `pytest` and `httpx.MockTransport`, asserting forward execution order, LIFO rollback order, and error handling across 18 distinct test cases:
 
 ```bash
 uv run --project orchestrators/naive pytest orchestrators/naive/tests -v
@@ -173,6 +188,42 @@ orchestrators/naive/tests/test_naive_saga.py::test_concurrent_runs_on_one_coordi
 ```
 
 ### 2 Empirical Proof of State Loss (Live Crash Test)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Operator as Client / Web UI
+    participant Vanilla as Vanilla Orchestrator (:8004)
+    participant Flight as Flight Service (:8001)
+    participant Hotel as Hotel Service (:8002)
+
+    rect rgb(240, 253, 244)
+        Note over Operator,Hotel: Phase 1: Sequential Forward Reservations
+        Operator->>Vanilla: POST /book (delay_seconds: 4.0)
+        activate Vanilla
+        Vanilla->>Flight: POST /reserve
+        Flight-->>Vanilla: 201 Created (status: RESERVED)
+        Note over Vanilla: LIFO Stack: [cancel_flight]
+
+        Vanilla->>Hotel: POST /reserve
+        Hotel-->>Vanilla: 201 Created (status: RESERVED)
+        Note over Vanilla: LIFO Stack: [cancel_flight, cancel_hotel]
+    end
+
+    rect rgb(254, 243, 199)
+        Note over Vanilla: Phase 2: 4-Second In-Flight Latency Window
+        Note over Vanilla: [CRASH] docker kill layover-naive (SIGKILL)
+        deactivate Vanilla
+    end
+
+    rect rgb(255, 228, 230)
+        Note over Vanilla,Hotel: Phase 3: Volatile Failure & Stranded Inventory
+        Note over Vanilla: RAM Wiped Out! Compensation Stack Lost!
+        Note over Flight,Hotel: flight.db: RESERVED | hotel.db: RESERVED (ZOMBIE HOLDS)
+        Operator-->>Vanilla: Connection Dropped / HTTP 502
+        Note over Operator: Restarting container starts fresh RAM: Zero Recovery!
+    end
+```
 
 During the `SLOW_DEMO` scenario (4-second pause between steps):
 

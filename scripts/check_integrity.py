@@ -14,14 +14,19 @@ import sys
 from typing import Any, Dict, List, Optional
 
 
-def query_container_sqlite(container: str, query: str) -> List[Dict[str, Any]]:
+def resolve_container(service: str, prefix: str = 'layover-') -> str:
+    '''Resolves the container name given a service key and prefix.'''
+    return f'{prefix}{service}'
+
+
+def query_container_sqlite(container: str, service: str, query: str) -> List[Dict[str, Any]]:
     '''
     Executes a read-only query inside a Docker container using python3/sqlite3
     and returns parsed JSON records.
     '''
     inline_cmd = (
         'import sqlite3, json; '
-        'con = sqlite3.connect(\'/app/data/' + container.replace('layover-', '') + '.db\'); '
+        f'con = sqlite3.connect(\'/app/data/{service}.db\'); '
         'con.row_factory = sqlite3.Row; '
         'rows = [dict(r) for r in con.execute(\"' + query + '\")]; '
         'print(json.dumps(rows))'
@@ -43,8 +48,8 @@ def query_container_sqlite(container: str, query: str) -> List[Dict[str, Any]]:
         return []
 
 
-def get_accounts() -> List[Dict[str, Any]]:
-    '''Retrieves customer balances from layover-payment.'''
+def get_accounts(container: str = 'layover-payment') -> List[Dict[str, Any]]:
+    '''Retrieves customer balances from payment container.'''
     inline_cmd = (
         'import sqlite3, json; '
         'con = sqlite3.connect(\'/app/data/payment.db\'); '
@@ -54,7 +59,7 @@ def get_accounts() -> List[Dict[str, Any]]:
     )
     try:
         result = subprocess.run(
-            ['docker', 'exec', 'layover-payment', 'python3', '-c', inline_cmd],
+            ['docker', 'exec', container, 'python3', '-c', inline_cmd],
             capture_output=True,
             text=True,
             check=True,
@@ -64,8 +69,12 @@ def get_accounts() -> List[Dict[str, Any]]:
         return []
 
 
-def set_account_balance(amount: float, customer_id: str = 'user_1') -> bool:
-    '''Updates customer balance in layover-payment.'''
+def set_account_balance(
+    amount: float,
+    customer_id: str = 'user_1',
+    container: str = 'layover-payment',
+) -> bool:
+    '''Updates customer balance in payment container.'''
     inline_cmd = (
         'import sqlite3; '
         'con = sqlite3.connect(\'/app/data/payment.db\'); '
@@ -74,7 +83,7 @@ def set_account_balance(amount: float, customer_id: str = 'user_1') -> bool:
     )
     try:
         subprocess.run(
-            ['docker', 'exec', 'layover-payment', 'python3', '-c', inline_cmd],
+            ['docker', 'exec', container, 'python3', '-c', inline_cmd],
             check=True,
             capture_output=True,
         )
@@ -132,10 +141,20 @@ def main() -> None:
         default=None,
         help='Set customer user_1 balance to specified amount (e.g. 1000.0)',
     )
+    parser.add_argument(
+        '--prefix',
+        type=str,
+        default='layover-',
+        help='Docker container name prefix (default: \'layover-\')',
+    )
     args = parser.parse_args()
 
+    flight_container = resolve_container('flight', args.prefix)
+    hotel_container = resolve_container('hotel', args.prefix)
+    payment_container = resolve_container('payment', args.prefix)
+
     if args.set_balance is not None:
-        set_account_balance(args.set_balance)
+        set_account_balance(args.set_balance, container=payment_container)
 
     limit = args.limit
 
@@ -146,18 +165,21 @@ def main() -> None:
 
     # 1. Fetch raw records
     flights = query_container_sqlite(
-        'layover-flight',
+        flight_container,
+        'flight',
         f'SELECT booking_id, flight_number, price, status, created_at FROM flight_bookings ORDER BY id DESC LIMIT {limit}',
     )
     hotels = query_container_sqlite(
-        'layover-hotel',
+        hotel_container,
+        'hotel',
         f'SELECT booking_id, hotel_name, price, status, created_at FROM hotel_bookings ORDER BY id DESC LIMIT {limit}',
     )
     payments = query_container_sqlite(
-        'layover-payment',
+        payment_container,
+        'payment',
         f'SELECT booking_id, amount, status, created_at FROM payments ORDER BY id DESC LIMIT {limit}',
     )
-    accounts = get_accounts()
+    accounts = get_accounts(container=payment_container)
 
     # 2. Build index by booking_id
     flight_map = {r['booking_id']: r for r in flights}

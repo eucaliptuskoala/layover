@@ -55,7 +55,7 @@ I design the system following clear microservice principles:
 - **Database-per-service:** Flight, Hotel, and Payment each own their own independent SQLite database. No service can directly query or modify another service's tables.
 - **Service autonomy & API contracts:** Each service exposes clear REST endpoints with standard JSON request and response schemas (via Pydantic), including dedicated compensation endpoints (`/cancel`, `/refund`).
 - **Failure injection mechanism:** A clean way to simulate failure (e.g., a test header `x-fail: true` or a chaos route) so crashes can be triggered deterministically during automated integration tests or from the UI.
-- **Architecture design:** Documenting both the naive direct-call flow and the Temporal saga state machine using sequence and architecture diagrams.
+- **Architecture design:** Documenting both the vanilla direct-call baseline and the Temporal saga state machine using sequence and architecture diagrams.
 
 ## Realizing
 

@@ -304,9 +304,9 @@ describe('booking sandbox', () => {
         scenario: 'happy_path',
       }),
     );
-    expect(screen.getByText('In-memory')).toBeVisible();
+    expect(screen.getByText('Vanilla')).toBeVisible();
     expect(screen.getByRole('region', { name: 'Booking service topology' })).toHaveTextContent(
-      'Engine: In-memory (baseline)',
+      'Engine: Vanilla (in-memory baseline)',
     );
     expect(screen.getByText(/No durable history or automatic restart recovery/)).toBeVisible();
     expect(screen.queryByRole('link', { name: /Temporal/ })).not.toBeInTheDocument();
@@ -320,7 +320,7 @@ describe('booking sandbox', () => {
     await userEvent.click(screen.getByRole('radio', { name: /In-memory/ }));
     await userEvent.click(button);
 
-    expect(screen.getByText('In-memory Saga')).toBeVisible();
+    expect(screen.getByText('Vanilla Saga (in-memory)')).toBeVisible();
     expect(screen.queryByText(/worker is offline/)).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('link', { name: /Back to checkout/ }));
     expect(screen.getByRole('radio', { name: /In-memory/ })).toBeDisabled();
@@ -342,7 +342,7 @@ describe('booking sandbox', () => {
     );
     await userEvent.click(screen.getByRole('radio', { name: /Temporal/ }));
     await userEvent.click(screen.getByRole('link', { name: /View last booking/ }));
-    expect(screen.getByText('In-memory')).toBeVisible();
+    expect(screen.getByText('Vanilla')).toBeVisible();
     // Even an unexpected Temporal URL in a naive response must not create an inspection link.
     expect(screen.queryByRole('link', { name: /Temporal/ })).not.toBeInTheDocument();
   });

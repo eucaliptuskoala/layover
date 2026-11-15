@@ -4,7 +4,7 @@ Naive Saga Orchestrator Service.
 Exposes REST API endpoints for in-memory travel booking orchestration.
 """
 
-from typing import Any, Dict
+from typing import Dict
 
 from fastapi import FastAPI, HTTPException, status
 

@@ -25,31 +25,45 @@ To satisfy **Software Engineering (LO1)**, I engineered an autonomous frontend c
 In modern distributed software engineering, the frontend is not merely a visual template; it functions as a primary **Driving Adapter (Client Port)** within Hexagonal Architecture (Ports and Adapters):
 
 ```mermaid
-graph TD
-    subgraph Frontend ["Frontend Client (React 19 + TypeScript)"]
-        UI["Sandbox UI / Controls"]
-        State["Client State Machine (useBooking)"]
-        Contracts["Typed Contracts (contracts.ts)"]
-        Topology["Service Topology Visualizer"]
+flowchart TD
+    subgraph Frontend ["💻 Frontend Client (React 19 + TypeScript)"]
+        UI["<b>Sandbox UI / Controls</b><br/>Scenario Picker & Latency Slider"]
+        State["<b>Client State Machine</b><br/>useBooking & useTopologyPlayback"]
+        Contracts["<b>Typed Contracts</b><br/><code>contracts.ts</code> Interfaces"]
+        Topology["<b>Service Topology Visualizer</b><br/>Animated SVG Beams & Pulse Badges"]
     end
 
-    subgraph Gateway ["FastAPI Gateway (:8000)"]
-        API["REST API Router (/api/v1)"]
-        Strategy["Saga Strategy Dispatcher"]
+    subgraph Gateway ["🚪 API Gateway Facade (:8000)"]
+        API["<b>REST Router</b><br/>/api/bookings & /health"]
+        Strategy["<b>Strategy Dispatcher</b><br/>Stateless Orchestrator Selector"]
     end
 
-    subgraph Orchestrators ["Orchestration Tier"]
-        Naive["Naive Saga (:8004)"]
-        Temporal["Temporal Cluster (:7233 / :8233)"]
+    subgraph Orchestrators ["⚙️ Orchestration Engines"]
+        Naive["<b>Vanilla Saga (:8004)</b><br/>Volatile RAM Stack (~24MB)"]
+        Temporal["<b>Temporal Cluster (:7233 / :8233)</b><br/>Durable Event History (~240MB)"]
     end
 
     UI --> State
     State --> Contracts
     Contracts -->|HTTP POST /api/bookings| API
     API --> Strategy
-    Strategy -->|HTTP| Naive
-    Strategy -->|gRPC| Temporal
+    Strategy -->|HTTP POST :8004| Naive
+    Strategy -->|gRPC :7233| Temporal
     State --> Topology
+
+    classDef clientNode fill:#ffffff,stroke:#64748b,stroke-width:1.5px,color:#0f172a;
+    classDef gatewayNode fill:#eff6ff,stroke:#3b82f6,stroke-width:1.5px,color:#1e3a8a;
+    classDef vanillaNode fill:#fef3c7,stroke:#d97706,stroke-width:1.5px,color:#92400e;
+    classDef temporalNode fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d;
+
+    class UI,State,Contracts,Topology clientNode;
+    class API,Strategy gatewayNode;
+    class Naive vanillaNode;
+    class Temporal temporalNode;
+
+    style Frontend fill:#f8faf8,stroke:#cbd5e1,stroke-width:1.5px,stroke-dasharray: 4 4;
+    style Gateway fill:#f8faf8,stroke:#93c5fd,stroke-width:1.5px,stroke-dasharray: 4 4;
+    style Orchestrators fill:#f8faf8,stroke:#86efac,stroke-width:1.5px,stroke-dasharray: 4 4;
 ```
 
 ### Architectural Principles Applied
@@ -127,6 +141,18 @@ The component renders visual cues:
 * **Red badge:** Point of failure where transaction was aborted.
 * **Blue spinner:** In-flight execution active during intentional delay tests.
 
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#ffffff', 'primaryBorderColor': '#15803d', 'primaryTextColor': '#0f172a'}}}%%
+stateDiagram-v2
+    [*] --> Idle: Initial Page Load
+    Idle --> Running: POST /api/bookings (isPending)
+    Running --> Success: steps_completed (CONFIRMED)
+    Running --> Failed: HTTP 4xx/5xx Domain Rejection
+    Failed --> Compensated: compensations_executed (LIFO Rollback)
+    Success --> Idle: Select New Scenario / Reset
+    Compensated --> Idle: Select New Scenario / Reset
+```
+
 ---
 
 ### 3 Telemetry & Live Latency Instrumentation (`useElapsed.ts`)
@@ -180,11 +206,17 @@ This allows immediate transition from high-level application observation to low-
 
 ## Key Decisions and Trade-offs
 
-| Decision | Alternative Considered | Engineering Rationale |
-| :--- | :--- | :--- |
-| **Vanilla CSS with Design Tokens** | TailwindCSS or component libraries (MUI, AntD) | Zero runtime overhead, complete styling control, and zero external build pipeline fragility. Clean glassmorphic design matching modern developer tool standards. |
-| **Single API Gateway Facade** | Direct client-to-microservice calls (CORS across 5 ports) | Prevents browser CORS complications, isolates client from internal topology changes, and provides single point for auth, validation, and telemetry. |
-| **Mockable Async Client (`gateway.ts`)** | Axios or global `window.fetch` | Encapsulates network communication into an injectable module, allowing 100% deterministic unit testing with Vitest without mocking browser globals. |
+1. **Vanilla CSS with Design Tokens (vs. TailwindCSS / Component Libraries):**
+   * *Alternative Considered:* TailwindCSS or heavy UI component libraries (Material UI, Ant Design).
+   * *Engineering Rationale:* Adopted native CSS custom properties (`theme.css`) with unified design tokens for zero runtime overhead, complete styling control, and zero build pipeline fragility. Created a high-density glassmorphic developer dashboard matching observability tools without external dependency bloat.
+
+2. **Single API Gateway Facade (vs. Direct Multi-Port Browser Calls):**
+   * *Alternative Considered:* Direct client-to-microservice browser requests spanning 5 independent HTTP ports (`:8001`, `:8002`, `:8003`, `:8004`, `:7233`).
+   * *Engineering Rationale:* Routing all frontend traffic through `layover-gateway` (`:8000`) prevents browser CORS complications across microservices, isolates the UI from internal container port bindings, and centralizes contract validation and telemetry.
+
+3. **Mockable Async Client Module (vs. Inline `fetch` / Axios Singletons):**
+   * *Alternative Considered:* Calling `window.fetch` or Axios directly inside React presentation components.
+   * *Engineering Rationale:* Encapsulated network communication inside an isolated, typed adapter module (`src/api/gateway.ts`). This allows 100% deterministic unit testing across 45 Vitest test cases via clean mocks without monkey-patching browser globals or leaking network side effects.
 
 ---
 

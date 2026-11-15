@@ -102,8 +102,8 @@ export function ProcessingPage({
           <div className="engine-badge">
             <span className="status-dot" />
             <span>
-              <b>{isNaive ? 'In-memory' : 'Temporal'}</b>
-              <small>{isNaive ? 'baseline saga' : 'durable saga'}</small>
+              <b>{isNaive ? 'Vanilla' : 'Temporal'}</b>
+              <small>{isNaive ? 'in-memory saga' : 'durable saga'}</small>
             </span>
           </div>
         </div>

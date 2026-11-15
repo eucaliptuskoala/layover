@@ -76,7 +76,7 @@ export function BookingOutcome({
             <div className="flex items-center justify-between gap-2 text-[11px] text-muted">
               <span>Execution</span>
               <b className="font-mono text-ink">
-                {isNaive ? 'In-memory Saga' : 'Temporal workflow'}
+                {isNaive ? 'Vanilla Saga (in-memory)' : 'Temporal workflow'}
               </b>
             </div>
             <div

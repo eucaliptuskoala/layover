@@ -6,7 +6,15 @@ import { formatDuration, getServiceAddress } from '../lib/format';
 import { AnimatedBeam } from './AnimatedBeam';
 import { Icon } from './Icon';
 
-const SERVICES = [
+interface ServiceDescriptor {
+  readonly key: 'flight' | 'hotel' | 'payment';
+  readonly name: string;
+  readonly healthName: string;
+  readonly icon: 'plane' | 'hotel' | 'card';
+  readonly action: string;
+}
+
+const SERVICES: readonly ServiceDescriptor[] = [
   {
     key: 'flight',
     name: 'Flight',
@@ -28,7 +36,7 @@ const SERVICES = [
     icon: 'card',
     action: 'charge · refund',
   },
-] as const;
+];
 
 export function ServiceTopology({
   isPending,
@@ -50,7 +58,7 @@ export function ServiceTopology({
         <h2>
           Service topology{' '}
           <span>
-            Engine: {orchestrator === 'naive' ? 'In-memory (baseline)' : 'Temporal (durable)'}
+            Engine: {orchestrator === 'naive' ? 'Vanilla (in-memory baseline)' : 'Temporal (durable)'}
           </span>
         </h2>
         <span className="text-[11px] text-muted">

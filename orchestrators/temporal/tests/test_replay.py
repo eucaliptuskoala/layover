@@ -278,12 +278,19 @@ async def test_replay_compensated_history(replay_booking_input: BookingWorkflowI
             assert replay_result.replay_failure is None
 
 
+# =============================================================================
+# Negative Test Mutant: Synthetic Non-Deterministic Workflow Variation
+# =============================================================================
+
+
 @workflow.defn(name='BookingWorkflow', sandboxed=False)
 class MutatedBookingWorkflow:
     """
-    Deliberately non-deterministic variant of BookingWorkflow.
-    Schedules an unauthorized extra activity before normal execution,
-    violating the historical event sequence.
+    Deliberately non-deterministic mutant of BookingWorkflow for Test 3.
+
+    Introduces an unauthorized activity schedule ('refund_payment_activity')
+    prior to any reservations being placed. Used by Replayer to formally verify
+    that event history divergence triggers a deterministic replay failure.
     """
 
     @workflow.run
