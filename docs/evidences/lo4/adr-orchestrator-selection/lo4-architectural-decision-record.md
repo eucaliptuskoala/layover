@@ -29,75 +29,16 @@ During the initial scoping phase ([Cycle 1](../../../cycle-1.md)), two classic d
 
 ---
 
-## Systems Thinking: How It Fits the Project
+## Systems Thinking & Empirical Testbed
 
-The comparison evaluates two distinct architectural paradigms interacting with the exact same underlying microservices:
+To rigorously compare both paradigms against the exact same microservices (`flight.db`, `hotel.db`, `payment.db`), I implemented and benchmarked two architectural options:
 
-```mermaid
-flowchart TD
-    Client["<b>Client (Web UI / CLI)</b>"] -->|HTTP :8000| Gateway["<b>API Gateway Facade</b><br/>Stateless Strategy Dispatcher"]
+* **Option 1: Vanilla In-Memory Saga (`layover-naive` on `:8004`):** Standalone FastAPI coordinator. Executes forward HTTP requests sequentially, tracking compensations in a volatile Python LIFO stack in RAM.
+* **Option 2: Durable Temporal Orchestration (`temporal` + `layover-worker` on `:7233`):** Event-sourced state machine using the Temporal Python SDK. Every workflow state transition is durably appended to Temporal Server's SQLite event store before activity execution.
 
-    Gateway -.->|Option 1: Vanilla HTTP| Naive["<b>Vanilla Baseline (layover-naive :8004)</b><br/>Volatile RAM Stack (~24MB RAM)"]
-    Gateway -.->|Option 2: Durable gRPC| Temporal["<b>Temporal Server & Worker (:7233)</b><br/>Event Sourcing Replay (~240MB RAM)"]
+### Empirical Chaos Methodology (`SIGKILL` Benchmark)
 
-    Naive --> Flight["<b>Flight Service (:8001)</b>"]
-    Naive --> Hotel["<b>Hotel Service (:8002)</b>"]
-    Naive --> Payment["<b>Payment Service (:8003)</b>"]
-
-    Temporal --> Flight
-    Temporal --> Hotel
-    Temporal --> Payment
-
-    classDef clientNode fill:#ffffff,stroke:#64748b,stroke-width:1.5px,color:#0f172a;
-    classDef gatewayNode fill:#eff6ff,stroke:#3b82f6,stroke-width:1.5px,color:#1e3a8a;
-    classDef vanillaNode fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e;
-    classDef temporalNode fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d;
-    classDef serviceNode fill:#ffffff,stroke:#64748b,stroke-width:1.5px,color:#0f172a;
-
-    class Client clientNode;
-    class Gateway gatewayNode;
-    class Naive vanillaNode;
-    class Temporal temporalNode;
-    class Flight,Hotel,Payment serviceNode;
-```
-
-### Evaluation Dimensions (Quality Criteria from PDP)
-
-In accordance with [docs/pdp.md](../../../pdp.md), the architectural options were evaluated across four empirical dimensions:
-
-1. **Data Consistency & Orphaned Holds:** Does every transaction settle into a terminal state (`CONFIRMED` or `COMPENSATED`), or do partial records stay stranded in `RESERVED`?
-2. **Recovery Complexity (RTO/RPO):** When a coordinator process is killed mid-transaction (`SIGKILL`), does the system recover automatically or require manual database scripts?
-3. **Infrastructure Footprint («The Infrastructure Tax»):** Process count, idle RAM utilization, and external dependencies.
-4. **Developer Ergonomics & Maintenance:** Code maintainability, state machine boilerplate, and workflow testability.
-
----
-
-## Progressive Engineering Steps
-
-The comparative study was conducted across four progressive phases:
-
-### 1 Vanilla In-Memory Baseline Implementation (Option 1)
-
-Implemented `orchestrators/naive/` as a standalone FastAPI service. It executes forward HTTP requests sequentially (`Flight -> Hotel -> Payment`) while pushing compensating mirrors onto an in-memory Python LIFO stack. On error, it unwinds the stack in reverse order.
-
-### 2 Durable Temporal Orchestrator Implementation (Option 2)
-
-Implemented `orchestrators/temporal/` using the Temporal Python SDK. Workflows are deterministic state machines that schedule activities. State transitions are durably recorded in Temporal Server's append-only Event History.
-
-### 3 Automated Quality & Replay Testing Harness
-
-Built a 120-test test suite covering both engines:
-
-* Vanilla orchestrator verified using `httpx.MockTransport` across 18 test cases.
-* Temporal workflow verified using `WorkflowEnvironment.start_time_skipping()` and native `Replayer` determinism tests across 6 test cases.
-
-### 4 Deterministic Chaos Benchmarking (SIGKILL Experiment)
-
-Configured a test harness with an HTTP synchronization barrier (`payment_barrier.py`) that pauses execution right after reservations succeed, immediately before payment:
-
-* Killed `layover-naive` via `SIGKILL`.
-* Killed `layover-worker` via `SIGKILL`.
-* Inspected SQLite databases across all containers before and after restart.
+Both engines were verified across a 120-test automated suite (including `httpx.MockTransport`, `WorkflowEnvironment` time-skipping, and Replayer determinism tests). To test crash recovery, an HTTP synchronization barrier paused execution during active reservations immediately before payment, and a `SIGKILL` (`docker kill`) was issued against the active coordinator:
 
 ```mermaid
 flowchart LR
@@ -127,17 +68,42 @@ flowchart LR
 
 ## Key Decisions & Architectural Decision Record (ADR)
 
-### Comparative Benchmark Matrix
+### Comparative Benchmark Breakdown
 
-| Evaluation Criteria | Option 1: Vanilla In-Memory Saga (Baseline)<br>*(codebase: layover-naive)* | Option 2: Temporal Orchestration | Engineering Justification |
-| :--- | :--- | :--- | :--- |
-| **Normal Business Failures** (Hotel 422, Payment 400) | **100% Consistent**<br>(LIFO rollbacks succeed) | **100% Consistent**<br>(LIFO rollbacks succeed) | Both engines cleanly trigger reverse compensations when the coordinator remains alive in RAM. |
-| **Crash-Stop Resilience** (`kill -9` during active holds) | **0% Resilient**<br>(100% Orphaned Holds) | **100% Resilient**<br>(0% Orphaned Holds) | Vanilla stack in RAM is destroyed. Temporal worker restart replays event history and completes rollbacks. |
-| **Recovery Behavior** | **Manual Intervention**<br>Requires custom SQL cleanup scripts. | **Zero-Touch Self-Healing**<br>Recovers in < 2 seconds upon worker startup. | Verified via `test_process_crashes.py` using SQLite database snapshots. |
-| **Process / Container Count** | **1 process** (`layover-naive` on `:8004`) | **2 processes minimum** (`temporal` server + `layover-worker`) | Temporal decouples event persistence from activity workers. |
-| **Idle Memory Footprint** | **~24 MB RAM** | **~210 MB – 260 MB RAM** (combined Go server + Python worker) | Measured via Docker container stats. |
-| **Code Complexity (Coordinator)** | **~140 lines of boilerplate** (manual LIFO stack, custom error catching) | **~45 lines of workflow code** (clean declarative activity execution) | Temporal manages retries, exponential backoffs, and timeout policies natively. |
-| **Testing Overhead** | Simple HTTP mock transport (`httpx.MockTransport`) | Requires `WorkflowEnvironment` & Replayer testing | Temporal requires understanding determinism constraints and SDK test environments. |
+1. **Normal Business Failures (Hotel 422, Payment 400):**
+   * *Option 1: Vanilla In-Memory Saga (Baseline):* **100% Consistent** — LIFO compensation stack executes sequentially to completion.
+   * *Option 2: Temporal Orchestration:* **100% Consistent** — Workflow exception triggers compensating activity handlers.
+   * *Engineering Rationale:* Both architectures succeed equally when the coordinator remains alive in memory; vanilla saga is sufficient if process crashes never occur.
+
+2. **Crash-Stop Resilience (`kill -9` During Active Holds):**
+   * *Option 1: Vanilla In-Memory Saga (Baseline):* **0% Resilient** (100% Orphaned Holds) — coordinator stack in RAM is completely wiped.
+   * *Option 2: Temporal Orchestration:* **100% Resilient** (0% Orphaned Holds) — event history is durably committed before activity execution.
+   * *Engineering Rationale:* Temporal eliminates split-brain and zombie reservations by decoupling state storage from the executing worker process.
+
+3. **Recovery Behavior Under Infrastructure Failure:**
+   * *Option 1: Vanilla In-Memory Saga (Baseline):* **Manual Intervention** — requires manual operator triage, log grepping, and custom SQL cleanup scripts.
+   * *Option 2: Temporal Orchestration:* **Zero-Touch Self-Healing** — worker reconnects upon reboot, replays history, and recovers in < 2 seconds.
+   * *Engineering Rationale:* Verified deterministically via automated integration benchmarks (`test_process_crashes.py`).
+
+4. **Process & Container Density:**
+   * *Option 1: Vanilla In-Memory Saga (Baseline):* **1 process** (`layover-naive` FastAPI container on port 8004).
+   * *Option 2: Temporal Orchestration:* **2 processes minimum** (`temporal` Go development server on port 7233 + `layover-worker` Python consumer).
+   * *Engineering Rationale:* Temporal separates cluster state management from task worker execution, requiring multi-process orchestration.
+
+5. **Idle Resource Consumption (RAM):**
+   * *Option 1: Vanilla In-Memory Saga (Baseline):* **~24 MB RAM** — lightweight single-process footprint.
+   * *Option 2: Temporal Orchestration:* **~210 MB – 260 MB RAM** — combined Go server runtime and Python worker event loop.
+   * *Engineering Rationale:* The «infrastructure tax» of durable orchestration: a ~10x increase in idle memory to guarantee complete fault tolerance.
+
+6. **Coordinator Code Complexity:**
+   * *Option 1: Vanilla In-Memory Saga (Baseline):* **~140 lines of boilerplate** — explicit LIFO rollback arrays, manual try/except blocks, custom HTTP status handling.
+   * *Option 2: Temporal Orchestration:* **~45 lines of workflow code** — declarative activity calls with framework-managed timeouts, retries, and backoffs.
+   * *Engineering Rationale:* Business workflow logic in Temporal remains clean and readable, offloading distributed systems mechanics to the platform.
+
+7. **Testing Overhead & Complexity:**
+   * *Option 1: Vanilla In-Memory Saga (Baseline):* Simple HTTP mock transport (`httpx.MockTransport`) testing standard request/response semantics.
+   * *Option 2: Temporal Orchestration:* Requires `WorkflowEnvironment` time-skipping mocks, activity stubs, and strict Replayer verification against JSON event logs.
+   * *Engineering Rationale:* Temporal introduces a steeper developer learning curve around workflow determinism and SDK testing fixtures.
 
 ### The Core Trade-off: The «Infrastructure Tax»
 
@@ -173,17 +139,8 @@ flowchart TD
     class Start startNode;
 ```
 
-#### Choose In-Memory / Lightweight Scripting When
-
-* The workflow is read-only or informational (e.g., aggregating user profile data, calculating report statistics).
-* The workflow is short-lived (<2s) and completely idempotent: if a failure strikes, the client can simply press «Retry» without leaving half-held real-world assets.
-* The team operates under extreme memory constraints (e.g., micro-edge IoT devices with <128MB total RAM).
-
-#### Choose Temporal Orchestration When
-
-* The workflow involves multi-party commitments, payments, or third-party APIs that cannot be rolled back with a single local database rollback.
-* Workflows span long durations (human-in-the-loop approvals, 24-hour check-in reminders).
-* Regulatory or compliance requirements demand a verifiable, append-only audit trail (Event History) for every execution.
+* **Rule of Thumb (Lightweight Scripting):** Choose in-memory scripting when workflows are read-only, short-lived (<2s), idempotent (client can safely retry), or running under extreme memory constraints (<128MB RAM).
+* **Rule of Thumb (Temporal Orchestration):** Choose Temporal when workflows involve multi-party financial holds, long durations (hours/days), zero tolerance for stranded inventory, or compliance audit requirements.
 
 ---
 
@@ -191,9 +148,9 @@ flowchart TD
 
 * **Professional Standard / Advising (LO4):** Formulated an evidence-based Architectural Decision Record grounded in measured reliability metrics, memory profiling, and chaos test data rather than marketing claims. Provided an actionable decision framework guiding development teams on when to accept or avoid durable workflow engine complexity.
 
-### Phase 2 Roadmap: Extended Cycle 5 Research
+### Proposed Scope Extension (For Alignment in Cycle 5)
 
-Following peer feedback during the Knowledge Sharing session ([LO5 Reflection](../../lo5/peer-knowledge-sharing/lo5-peer-feedback-and-reflection.md)), this decision will be further evaluated during Phase 2 of Cycle 5:
+Following peer feedback during the Knowledge Sharing session ([LO5 Reflection](../../lo5/peer-knowledge-sharing/lo5-peer-feedback-and-reflection.md)), I formulated two potential research extensions to discuss with teachers during the upcoming consultation, balancing extra depth against the PDP time budget:
 
 1. **Continuous Resource & Metric Profiling:** Integrating Prometheus and Grafana to monitor activity latency, task queue backlog, and worker poll delays under sustained operation.
 2. **High-Concurrency Load Benchmarking:** Scaling from single-request chaos benchmarks to 100 concurrent booking requests to measure SQLite lock contention and worker queue throughput.

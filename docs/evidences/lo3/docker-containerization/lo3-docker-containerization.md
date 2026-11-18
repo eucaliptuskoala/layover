@@ -55,15 +55,16 @@ flowchart TD
 
 ### Container Registry & Responsibility Breakdown
 
-| Service Name | Container Name | Port Mapping | Storage Mount | Healthcheck Mechanism |
-| :--- | :--- | :--- | :--- | :--- |
-| `flight-service` | `layover-flight` | `8001:8001` | `layover-flight-data` | `python3 urllib` -> `/health` |
-| `hotel-service` | `layover-hotel` | `8002:8002` | `layover-hotel-data` | `python3 urllib` -> `/health` |
-| `payment-service` | `layover-payment` | `8003:8003` | `layover-payment-data` | `python3 urllib` -> `/health` |
-| `temporal` | `layover-temporal` | `7233:7233`<br/>`8233:8233` | Ephemeral Dev | Built-in Temporal startup |
-| `temporal-worker` | `layover-worker` | None (worker) | None | Dependent on Temporal + Services |
-| `naive-orchestrator`<br>*(Vanilla Baseline)* | `layover-naive` | `8004:8004` | None (in-memory) | `python3 urllib` -> `/health` |
-| `gateway` | `layover-gateway` | `8000:8000` | None (stateless) | `python3 urllib` -> `/health` |
+* **Autonomous Microservices Tier (Database-per-Service):**
+  * **`flight-service` (`layover-flight`):** Port `8001:8001` · Storage `layover-flight-data` (named SQLite volume) · Healthcheck: `urllib` $\rightarrow$ `/health`.
+  * **`hotel-service` (`layover-hotel`):** Port `8002:8002` · Storage `layover-hotel-data` (named SQLite volume) · Healthcheck: `urllib` $\rightarrow$ `/health`.
+  * **`payment-service` (`layover-payment`):** Port `8003:8003` · Storage `layover-payment-data` (named SQLite volume) · Healthcheck: `urllib` $\rightarrow$ `/health`.
+* **Orchestration Engines Tier:**
+  * **`naive-orchestrator` (`layover-naive`):** Port `8004:8004` · Ephemeral in-memory RAM · Vanilla baseline coordinator · Healthcheck: `urllib` $\rightarrow$ `/health`.
+  * **`temporal` (`layover-temporal`):** Ports `7233:7233` (gRPC) & `8233:8233` (Web UI) · Official development server with SQLite event history.
+  * **`temporal-worker` (`layover-worker`):** No host port (task queue consumer) · Polls workflow activities; depends on Temporal server + microservices.
+* **Gateway Facade Tier:**
+  * **`gateway` (`layover-gateway`):** Port `8000:8000` · Stateless strategy dispatcher · Cascading dependency: waits for all downstream services to report healthy.
 
 ---
 
@@ -205,11 +206,17 @@ This symmetry ensures that differences in system behavior reflect **orchestratio
 
 ## Key Operational Decisions and Trade-offs
 
-| Decision | Alternative Considered | Engineering Rationale |
-| :--- | :--- | :--- |
-| **Official `temporal:latest` Dev Server** | Multi-container Temporal cluster (Postgres, ElasticSearch, Web UI, Frontend, Matching, History) | Running full enterprise Temporal requires 5 separate containers and 4+ GB of RAM. The official development image bundles all services and the Web UI into a single container using SQLite, running smoothly in local developer environments with under 250 MB RAM. |
-| **Native Python `urllib` Healthchecks** | Installing `curl` or `wget` via `apt-get` | Avoids image bloat, eliminates extra attack surface in production containers, and runs directly within `python:3.11-slim`. |
-| **Named Docker Volumes for SQLite** | Host bind mounts (`./data:/app/data`) | Named volumes are managed by Docker engine, preventing host-OS file-locking conflicts (common with SQLite on macOS/Windows host mounts) and guaranteeing strict filesystem isolation. |
+1. **Official `temporal:latest` Dev Server (vs. Full Enterprise Cluster):**
+   * *Alternative Considered:* Multi-container enterprise Temporal cluster (PostgreSQL, Elasticsearch, Web UI, Frontend, Matching, History).
+   * *Engineering Rationale:* An enterprise cluster requires 5 containers and 4+ GB of RAM. The official development image (`temporalio/temporal:latest`) bundles the gRPC engine, SQLite event store, and Web UI into a single container using < 250 MB RAM, ideal for reproducible local evaluation.
+
+2. **Native Python `urllib` Healthchecks (vs. Installing `curl` or `wget`):**
+   * *Alternative Considered:* Installing `curl` via `apt-get` in container images.
+   * *Engineering Rationale:* Uses Python's built-in `urllib.request` directly within `python:3.11-slim`. This avoids image bloat, eliminates extra security attack surface, and keeps images minimal.
+
+3. **Named Docker Volumes for SQLite (vs. Host Bind Mounts):**
+   * *Alternative Considered:* Direct bind mounts (`./data:/app/data`).
+   * *Engineering Rationale:* Named Docker volumes (`layover-*-data`) are managed directly by the Docker storage driver, completely avoiding host-OS filesystem locking bugs (frequent with SQLite on macOS/Windows host mounts) and enforcing strict data isolation between microservices.
 
 ---
 
@@ -246,7 +253,7 @@ curl -s http://localhost:8000/health | jq .
     {"name": "Flight Service", "url": "http://flight-service:8001", "status": "ok", "latency_ms": 2.1},
     {"name": "Hotel Service", "url": "http://hotel-service:8002", "status": "ok", "latency_ms": 1.9},
     {"name": "Payment Service", "url": "http://payment-service:8003", "status": "ok", "latency_ms": 1.7},
-    {"name": "Naive Orchestrator", "url": "http://naive-orchestrator:8004", "status": "ok", "latency_ms": 2.0}
+    {"name": "Vanilla Orchestrator", "url": "http://naive-orchestrator:8004", "status": "ok", "latency_ms": 2.0}
   ]
 }
 ```
