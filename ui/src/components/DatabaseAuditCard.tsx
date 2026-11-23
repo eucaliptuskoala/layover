@@ -21,13 +21,7 @@ function ServiceDbCard({
   const isConfirmed = service.status === 'CONFIRMED' || service.status === 'CHARGED';
   const isRolledBack = service.status === 'CANCELLED' || service.status === 'REFUNDED';
 
-  const dotTone = isStranded
-    ? 'amber'
-    : isNotFound
-      ? 'neutral'
-      : isConfirmed
-        ? ''
-        : 'neutral';
+  const dotTone = isStranded ? 'amber' : isConfirmed ? '' : 'neutral';
 
   const statusClass = isStranded
     ? 'status-stranded'
@@ -68,20 +62,29 @@ export function DatabaseAuditCard({
   const response = run.phase === 'result' ? run.response : null;
   const bookingId = response?.booking_id || run.request.booking_id;
 
-  const [audit, setAudit] = useState<BookingAuditReport | null>(response?.audit || null);
+  const [refetchedAudit, setRefetchedAudit] = useState<BookingAuditReport | null>(null);
+  const [prevBookingId, setPrevBookingId] = useState(bookingId);
   const [isLoading, setIsLoading] = useState(false);
+
+  let currentRefetched = refetchedAudit;
+  if (bookingId !== prevBookingId) {
+    setPrevBookingId(bookingId);
+    setRefetchedAudit(null);
+    currentRefetched = null;
+  }
+
+  const audit = currentRefetched ?? response?.audit ?? null;
 
   useEffect(() => {
     if (response?.audit) {
-      setAudit(response.audit);
       return;
     }
 
     if (run.phase !== 'pending' && !isPlaybackActive && bookingId) {
       setIsLoading(true);
       getBookingAudit(bookingId)
-        .then((data) => setAudit(data))
-        .catch(() => setAudit(null))
+        .then((data) => setRefetchedAudit(data))
+        .catch(() => setRefetchedAudit(null))
         .finally(() => setIsLoading(false));
     }
   }, [response?.audit, bookingId, run.phase, isPlaybackActive]);
@@ -91,7 +94,7 @@ export function DatabaseAuditCard({
     setIsLoading(true);
     try {
       const data = await getBookingAudit(bookingId);
-      setAudit(data);
+      setRefetchedAudit(data);
       toast.success('Database state audit updated');
     } catch {
       toast.error('Could not refresh database state audit');
@@ -141,13 +144,11 @@ export function DatabaseAuditCard({
             <p>Awaiting transaction outcome before verifying database states...</p>
           </div>
         ) : audit ? (
-          <>
-            <div className="db-services-grid">
-              <ServiceDbCard service={audit.flight} />
-              <ServiceDbCard service={audit.hotel} />
-              <ServiceDbCard service={audit.payment} />
-            </div>
-          </>
+          <div className="db-services-grid">
+            <ServiceDbCard service={audit.flight} />
+            <ServiceDbCard service={audit.hotel} />
+            <ServiceDbCard service={audit.payment} />
+          </div>
         ) : (
           <div className="audit-empty">
             <p>Database state audit is currently unavailable for this booking.</p>

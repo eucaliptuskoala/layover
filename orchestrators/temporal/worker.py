@@ -43,8 +43,10 @@ async def handle_metrics_request(reader: asyncio.StreamReader, writer: asyncio.S
         )
         writer.write(response.encode('utf-8'))
         await writer.drain()
-    except Exception:
+    except (ConnectionResetError, BrokenPipeError, asyncio.CancelledError):
         pass
+    except Exception as exc:
+        print(f'[Temporal Worker Metrics] Telemetry request error: {exc}')
     finally:
         try:
             writer.close()
@@ -86,7 +88,11 @@ async def run_worker() -> None:
     print('[Temporal Worker] Registered Activities: Flight (3), Hotel (3), Payment (2)')
     print('[Temporal Worker] Ready to process bookings. Press Ctrl+C to exit.')
 
-    await worker.run()
+    try:
+        await worker.run()
+    finally:
+        metrics_server.close()
+        await metrics_server.wait_closed()
 
 
 if __name__ == '__main__':
