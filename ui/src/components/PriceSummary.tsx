@@ -48,7 +48,7 @@ export function PriceSummary({
         </div>
         <div>
           <span>Additional fees</span>
-          <span className="included">NONE IN SANDBOX</span>
+          <span className="included">NONE</span>
         </div>
       </div>
       <div className="price-total">
@@ -56,19 +56,6 @@ export function PriceSummary({
           Total <small>USD</small>
         </span>
         <strong>{formatMoney(scenario.expected_total)}</strong>
-      </div>
-
-      <div className="saga-note">
-        <span className="saga-icon">
-          <Icon name="shield" />
-        </span>
-        <span className="flex-1 min-w-0">
-          <strong>Coordinated by the Layover Saga</strong>
-          <span>Compensating actions are attempted when a booking step fails.</span>
-        </span>
-        <span className="font-mono text-[10px] text-faint whitespace-nowrap saga-meta">
-          3 svc · 1 workflow
-        </span>
       </div>
 
       <div
@@ -83,7 +70,7 @@ export function PriceSummary({
         <div className="flex items-center gap-2.5">
           <span className="demo-card" data-brand={card} aria-hidden="true" />
           <span className="flex-1 min-w-0">
-            <span className="block text-[10px] text-faint">Demo payment method · display only</span>
+            <span className="block text-[10px] text-faint">Demo payment method</span>
             <span className="block text-xs font-medium">
               <span className="font-mono">
                 {card} ···· {card === 'Visa' ? '4412' : '1009'}
@@ -148,7 +135,7 @@ export function PriceSummary({
       </button>
       <p className="payment-caption">
         <Icon name="lock" />
-        Test account only · no real card is charged
+        Test account only
       </p>
     </section>
   );

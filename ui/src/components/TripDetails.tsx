@@ -60,9 +60,6 @@ export function TripHeader() {
         </span>
         <span>1 traveler · Economy</span>
       </div>
-      <p className="itinerary-note">
-        Illustrative itinerary · booking values come from the selected gateway scenario
-      </p>
     </header>
   );
 }
@@ -114,7 +111,7 @@ export function TripDetails({ scenario }: { scenario: Scenario }) {
           <p className="mt-1 text-[11.5px] text-muted">
             {scenario.hotel_price < 0
               ? 'Fault fixture · intentionally invalid price'
-              : '2 nights · Nov 14–16 · illustrative dates'}
+              : '2 nights · Nov 14–16'}
           </p>
         </div>
       </article>

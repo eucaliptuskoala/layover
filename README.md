@@ -64,7 +64,9 @@ The project consists of three independent microservices following the **database
 | **Payment Service** | `8003` | `payment.db` (SQLite) | `POST /charge`, `POST /refund`, `GET /health` |
 | **Vanilla Orchestrator** | `8004` | In-Memory RAM | `POST /book`, `GET /health` *(container: `layover-naive`)* |
 | **Temporal Cluster** | `7233`<br/>`8233` | SQLite (Dev) | gRPC Engine (`:7233`) and Web UI Dashboard (`:8233`) |
-| **Temporal Worker** | None | Event Log | Consumes workflows & activities from `booking-task-queue` |
+| **Temporal Worker** | `8005` | Event Log | Consumes workflows & activities from `booking-task-queue`, exposes `/metrics` (`:8005`) |
+| **Prometheus** | `9090` | In-Memory / TSDB | Scrapes process metrics (RSS MB, CPU, Uptime) across all services (`:9090`) |
+| **Grafana** | `3000` | SQLite | Pre-configured dashboard for resource footprint analysis (`:3000`) |
 | **React UI Dashboard** | `5173` | Local Storage | Interactive developer sandbox & topology visualizer |
 
 ### Engine Behavior

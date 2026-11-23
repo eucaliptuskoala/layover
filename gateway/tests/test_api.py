@@ -181,3 +181,74 @@ async def test_cors_preflight(test_client: AsyncClient):
 
     assert response.status_code == 200
     assert response.headers.get('access-control-allow-origin') in ('*', 'http://localhost:5173')
+
+
+@pytest.mark.asyncio
+async def test_audit_endpoint_detects_stranded_hold(test_client: AsyncClient, monkeypatch):
+    """Verifies that the audit endpoint queries microservices and flags stranded holds."""
+    import httpx
+
+    original_get = httpx.AsyncClient.get
+
+    async def mock_get(self, url, *args, **kwargs):
+        url_str = str(url)
+        if '8001' in url_str:  # Flight service
+            return httpx.Response(
+                status_code=200,
+                json={
+                    'booking_id': 'bk-stranded-test',
+                    'flight_number': 'LH-204',
+                    'status': 'RESERVED',
+                },
+            )
+        elif '8002' in url_str or '8003' in url_str:  # Hotel & Payment services
+            return httpx.Response(status_code=404, json={'detail': 'Not found'})
+        return await original_get(self, url, *args, **kwargs)
+
+    monkeypatch.setattr(httpx.AsyncClient, 'get', mock_get)
+
+    response = await test_client.get('/api/bookings/bk-stranded-test/audit')
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data['booking_id'] == 'bk-stranded-test'
+    assert data['has_stranded_records'] is True
+    assert data['flight']['status'] == 'RESERVED'
+    assert data['flight']['is_stranded'] is True
+    assert data['flight']['database_file'] == 'flight.db'
+    assert data['hotel']['status'] == 'NOT_FOUND'
+    assert data['hotel']['is_stranded'] is False
+    assert data['payment']['status'] == 'NOT_FOUND'
+    assert data['payment']['is_stranded'] is False
+    assert 'flight.db' in data['summary']
+
+
+@pytest.mark.asyncio
+async def test_audit_endpoint_consistent_state(test_client: AsyncClient, monkeypatch):
+    """Verifies that the audit endpoint reports clean state when reservations are cancelled."""
+    import httpx
+
+    original_get = httpx.AsyncClient.get
+
+    async def mock_get(self, url, *args, **kwargs):
+        url_str = str(url)
+        if '8001' in url_str:
+            return httpx.Response(
+                status_code=200,
+                json={'booking_id': 'bk-clean-test', 'status': 'CANCELLED'},
+            )
+        elif '8002' in url_str or '8003' in url_str:
+            return httpx.Response(status_code=404, json={'detail': 'Not found'})
+        return await original_get(self, url, *args, **kwargs)
+
+    monkeypatch.setattr(httpx.AsyncClient, 'get', mock_get)
+
+    response = await test_client.get('/api/bookings/bk-clean-test/audit')
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data['booking_id'] == 'bk-clean-test'
+    assert data['has_stranded_records'] is False
+    assert data['flight']['status'] == 'CANCELLED'
+    assert data['flight']['is_stranded'] is False
+    assert data['summary'] == 'All service databases are in a consistent state.'

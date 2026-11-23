@@ -215,6 +215,7 @@ class BookingWorkflow:
             )
 
             # Rollback registered compensations in reverse order (LIFO)
+            failed_compensations: list[str] = []
             for comp_func, comp_arg, comp_name in reversed(compensations):
                 try:
                     workflow.logger.warning(f'Executing compensation: {comp_name}')
@@ -226,16 +227,24 @@ class BookingWorkflow:
                     )
                     self.compensations_executed.append(comp_name)
                 except Exception as comp_exc:
+                    failed_compensations.append(comp_name)
                     workflow.logger.critical(
                         f'Critical error executing compensation {comp_name}: {comp_exc}'
                     )
 
+            final_status = 'FAILED' if failed_compensations else 'COMPENSATED'
+            final_error = (
+                f'{error_msg} | Critical: failed compensation(s): {", ".join(failed_compensations)}'
+                if failed_compensations
+                else error_msg
+            )
+
             return BookingWorkflowResult(
                 booking_id=input_data.booking_id,
                 customer_id=input_data.customer_id,
-                status='COMPENSATED',
+                status=final_status,
                 total_amount=input_data.total_amount,
                 steps_completed=self.steps_completed,
                 compensations_executed=self.compensations_executed,
-                error_message=error_msg,
+                error_message=final_error,
             )

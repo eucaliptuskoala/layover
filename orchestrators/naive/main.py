@@ -6,9 +6,10 @@ Exposes REST API endpoints for in-memory travel booking orchestration.
 
 from typing import Dict
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, Response, status
 
 from coordinator import NaiveSagaCoordinator
+from metrics import generate_prometheus_metrics
 from models import NaiveSagaInput, NaiveSagaResult
 
 
@@ -23,6 +24,13 @@ app = FastAPI(
 async def health_check() -> Dict[str, str]:
     """Basic health check endpoint."""
     return {'service': 'naive-orchestrator', 'status': 'ok'}
+
+
+@app.get('/metrics')
+async def get_metrics() -> Response:
+    """Exposes Prometheus text metrics for process memory, CPU, and uptime."""
+    content = generate_prometheus_metrics('layover-naive')
+    return Response(content=content, media_type='text/plain; version=0.0.4')
 
 
 @app.post(

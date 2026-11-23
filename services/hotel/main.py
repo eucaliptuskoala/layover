@@ -5,8 +5,9 @@ Exposes REST API endpoints for hotel reservations and compensating cancellations
 
 from contextlib import asynccontextmanager
 from typing import List
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, Response, status
 from database import db_instance
+from metrics import generate_prometheus_metrics
 from models import (
     HotelCancellationRequest,
     HotelConfirmationRequest,
@@ -38,6 +39,13 @@ app = FastAPI(
 @app.get('/health')
 async def health_check():
     return {'service': 'hotel', 'status': 'ok'}
+
+
+@app.get('/metrics')
+async def get_metrics() -> Response:
+    """Exposes Prometheus text metrics for process memory, CPU, and uptime."""
+    content = generate_prometheus_metrics('layover-hotel')
+    return Response(content=content, media_type='text/plain; version=0.0.4')
 
 
 @app.post(

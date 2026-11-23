@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router';
 
 import type { HealthReport } from '../api/contracts';
 import { BookingOutcome } from '../components/BookingOutcome';
+import { DatabaseAuditCard } from '../components/DatabaseAuditCard';
 import { ExecutionSummary } from '../components/ExecutionSummary';
 import { Icon } from '../components/Icon';
 import { ServiceTopology } from '../components/ServiceTopology';
@@ -146,11 +147,17 @@ export function ProcessingPage({
           playback={playback}
         />
         <div className="processing-grid">
-          <ExecutionSummary
-            run={activeRun}
-            elapsed={elapsed}
-            isPlaybackActive={isAnimating}
-          />
+          <div className="execution-column">
+            <ExecutionSummary
+              run={activeRun}
+              elapsed={elapsed}
+              isPlaybackActive={isAnimating}
+            />
+            <DatabaseAuditCard
+              run={activeRun}
+              isPlaybackActive={isAnimating}
+            />
+          </div>
           <BookingOutcome
             run={activeRun}
             elapsed={elapsed}

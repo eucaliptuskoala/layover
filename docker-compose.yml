@@ -62,7 +62,7 @@ services:
     ports:
       - "7233:7233"
       - "8233:8233"
-    command: ["server", "start-dev", "--ip", "0.0.0.0", "--namespace", "layover"]
+    command: ["server", "start-dev", "--ip", "0.0.0.0", "--namespace", "layover", "--metrics-port", "9091"]
     restart: unless-stopped
 
   temporal-worker:
@@ -70,6 +70,8 @@ services:
       context: ./orchestrators/temporal
       dockerfile: Dockerfile
     container_name: layover-worker
+    ports:
+      - "8005:8005"
     environment:
       - TEMPORAL_HOST=temporal:7233
       - TEMPORAL_NAMESPACE=layover
@@ -147,6 +149,30 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: layover-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: layover-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
     restart: unless-stopped
 
 volumes:

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   apiClient,
   createBooking,
+  getBookingAudit,
   getBookingError,
   getHealth,
   getScenarios,
@@ -90,5 +91,39 @@ describe('gateway client', () => {
     expect(result.message).toContain('does not recover automatically');
     expect(result.message).toContain('not been retried');
     expect(result.message).not.toContain('Temporal');
+  });
+
+  it('loads distributed booking audit report and validates stranded records', async () => {
+    const auditReport = {
+      booking_id: 'bk-audit-test',
+      has_stranded_records: true,
+      flight: {
+        service_name: 'Flight Service',
+        database_file: 'flight.db',
+        status: 'RESERVED',
+        is_stranded: true,
+        message: 'Stranded hold active in flight.db',
+      },
+      hotel: {
+        service_name: 'Hotel Service',
+        database_file: 'hotel.db',
+        status: 'NOT_FOUND',
+        is_stranded: false,
+        message: 'No record found in hotel.db',
+      },
+      payment: {
+        service_name: 'Payment Service',
+        database_file: 'payment.db',
+        status: 'NOT_FOUND',
+        is_stranded: false,
+        message: 'No record found in payment.db',
+      },
+      summary: 'Stranded records detected: flight.db (seat hold)',
+    };
+    const get = vi.spyOn(apiClient, 'get').mockResolvedValue({ data: auditReport });
+
+    const result = await getBookingAudit('bk-audit-test');
+    expect(result).toEqual(auditReport);
+    expect(get).toHaveBeenCalledWith('/bookings/bk-audit-test/audit', { signal: undefined });
   });
 });

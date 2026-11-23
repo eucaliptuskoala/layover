@@ -35,6 +35,23 @@ def get_payment_url() -> str:
     return os.getenv('PAYMENT_SERVICE_URL', 'http://localhost:8003')
 
 
+def check_service_response(response: httpx.Response, action_name: str) -> None:
+    """
+    Distinguishes transient server infrastructure errors from permanent business rejections.
+    - 5xx errors (e.g. 500, 502, 503, 504): transient, non_retryable=False (Temporal retries).
+    - 4xx errors (e.g. 400 Insufficient Funds, 409 Conflict, 422 Unprocessable): permanent, non_retryable=True.
+    """
+    if response.status_code >= 500:
+        raise ApplicationError(
+            f'{action_name} failed with server error ({response.status_code}): {response.text}',
+            non_retryable=False,
+        )
+    raise ApplicationError(
+        f'{action_name} rejected ({response.status_code}): {response.text}',
+        non_retryable=True,
+    )
+
+
 # ==========================================
 # Flight Activities (Forward & Compensation)
 # ==========================================
@@ -52,11 +69,7 @@ async def reserve_flight_activity(request: FlightReservationRequest) -> FlightRe
     if response.status_code == 201:
         return FlightResponse(**response.json())
 
-    # Business failure (e.g. 409 Conflict, 422 Unprocessable)
-    raise ApplicationError(
-        f'Flight reservation rejected ({response.status_code}): {response.text}',
-        non_retryable=True,
-    )
+    check_service_response(response, 'Flight reservation')
 
 
 @activity.defn
@@ -72,10 +85,7 @@ async def cancel_flight_activity(request: FlightCancellationRequest) -> FlightRe
     if response.status_code == 200:
         return FlightResponse(**response.json())
 
-    raise ApplicationError(
-        f'Flight cancellation failed ({response.status_code}): {response.text}',
-        non_retryable=True,
-    )
+    check_service_response(response, 'Flight cancellation')
 
 
 @activity.defn
@@ -91,10 +101,7 @@ async def confirm_flight_activity(request: FlightConfirmationRequest) -> FlightR
     if response.status_code == 200:
         return FlightResponse(**response.json())
 
-    raise ApplicationError(
-        f'Flight confirmation failed ({response.status_code}): {response.text}',
-        non_retryable=True,
-    )
+    check_service_response(response, 'Flight confirmation')
 
 
 # =========================================
@@ -114,10 +121,7 @@ async def reserve_hotel_activity(request: HotelReservationRequest) -> HotelRespo
     if response.status_code == 201:
         return HotelResponse(**response.json())
 
-    raise ApplicationError(
-        f'Hotel reservation rejected ({response.status_code}): {response.text}',
-        non_retryable=True,
-    )
+    check_service_response(response, 'Hotel reservation')
 
 
 @activity.defn
@@ -133,10 +137,7 @@ async def cancel_hotel_activity(request: HotelCancellationRequest) -> HotelRespo
     if response.status_code == 200:
         return HotelResponse(**response.json())
 
-    raise ApplicationError(
-        f'Hotel cancellation failed ({response.status_code}): {response.text}',
-        non_retryable=True,
-    )
+    check_service_response(response, 'Hotel cancellation')
 
 
 @activity.defn
@@ -152,10 +153,7 @@ async def confirm_hotel_activity(request: HotelConfirmationRequest) -> HotelResp
     if response.status_code == 200:
         return HotelResponse(**response.json())
 
-    raise ApplicationError(
-        f'Hotel confirmation failed ({response.status_code}): {response.text}',
-        non_retryable=True,
-    )
+    check_service_response(response, 'Hotel confirmation')
 
 
 # ===========================================
@@ -175,11 +173,7 @@ async def charge_payment_activity(request: PaymentChargeRequest) -> PaymentRespo
     if response.status_code in (200, 201):
         return PaymentResponse(**response.json())
 
-    # E.g. 400 Insufficient Funds
-    raise ApplicationError(
-        f'Payment charge rejected ({response.status_code}): {response.text}',
-        non_retryable=True,
-    )
+    check_service_response(response, 'Payment charge')
 
 
 @activity.defn
@@ -195,7 +189,4 @@ async def refund_payment_activity(request: PaymentRefundRequest) -> PaymentRespo
     if response.status_code == 200:
         return PaymentResponse(**response.json())
 
-    raise ApplicationError(
-        f'Payment refund failed ({response.status_code}): {response.text}',
-        non_retryable=True,
-    )
+    check_service_response(response, 'Payment refund')

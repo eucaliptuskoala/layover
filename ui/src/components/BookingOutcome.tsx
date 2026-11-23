@@ -19,23 +19,23 @@ export function BookingOutcome({
   const presentation = response && !isPlaybackActive
     ? getOutcome(response)
     : {
-        tone: run.phase === 'rejected' ? 'coral' : 'amber',
-        icon: run.phase === 'pending' || isPlaybackActive ? '◌' : '?',
-        label:
-          run.phase === 'pending' || isPlaybackActive
-            ? 'RUNNING'
-            : run.phase === 'rejected'
-              ? 'REJECTED'
-              : 'OUTCOME UNKNOWN',
-        note:
-          run.phase === 'pending' || isPlaybackActive
-            ? isNaive
-              ? 'Dispatching activities. In-memory rollback state exists only in RAM.'
-              : 'Coordinating workflow activities via Temporal event log.'
-            : run.phase === 'unknown' || run.phase === 'rejected'
-              ? run.message
-              : '',
-      };
+      tone: run.phase === 'rejected' ? 'coral' : 'amber',
+      icon: run.phase === 'pending' || isPlaybackActive ? '◌' : '?',
+      label:
+        run.phase === 'pending' || isPlaybackActive
+          ? 'RUNNING'
+          : run.phase === 'rejected'
+            ? 'REJECTED'
+            : 'OUTCOME UNKNOWN',
+      note:
+        run.phase === 'pending' || isPlaybackActive
+          ? isNaive
+            ? 'Dispatching activities. In-memory rollback state exists only in RAM.'
+            : 'Coordinating workflow activities via Temporal event log.'
+          : run.phase === 'unknown' || run.phase === 'rejected'
+            ? run.message
+            : '',
+    };
   const states = getServiceStates(response);
 
   function download() {
@@ -135,13 +135,6 @@ export function BookingOutcome({
                 <p>{response.error_message}</p>
               </div>
             )}
-            <div className="result-note">
-              <Icon name={run.phase === 'unknown' ? 'alert' : 'shield'} />
-              <p>
-                The total is the attempted booking amount, not a live account balance or proof of
-                payment. No receipt or ticket ID is exposed by this API.
-              </p>
-            </div>
             <button
               className={`btn ${response?.status === 'CONFIRMED' ? 'btn-primary' : 'btn-ghost'} mt-4`}
               onClick={download}

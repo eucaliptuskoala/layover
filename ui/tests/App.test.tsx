@@ -58,7 +58,7 @@ describe('booking sandbox', () => {
 
     expect(screen.getByRole('button', { name: /Confirm & Pay.*299/ })).toBeEnabled();
     expect(screen.getByText('INVALID_HOTEL_OVERBOOKED')).toBeVisible();
-    expect(screen.getByText(/Negative hotel price/)).toBeVisible();
+    expect(screen.getByText(/Fault fixture/)).toBeVisible();
   });
 
   it('enables both engines and defaults to Temporal', async () => {

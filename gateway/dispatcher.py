@@ -14,6 +14,11 @@ from temporalio.contrib.pydantic import pydantic_data_converter
 from models import BookingRequest, BookingResponse, OrchestratorType
 from scenarios import resolve_booking_payload
 
+try:
+    from .audit import audit_booking_state
+except ImportError:
+    from audit import audit_booking_state
+
 
 TEMPORAL_HOST = os.getenv('TEMPORAL_HOST', 'localhost:7233')
 TEMPORAL_NAMESPACE = os.getenv('TEMPORAL_NAMESPACE', 'layover')
@@ -84,7 +89,8 @@ class NaiveSagaStrategy(SagaOrchestratorStrategy):
     async def execute(self, request: BookingRequest, payload: dict[str, Any]) -> BookingResponse:
         booking_id = payload['booking_id']
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            timeout_seconds = max(60.0, float(payload.get('delay_seconds', 0.0)) * 6 + 15.0)
+            async with httpx.AsyncClient(timeout=timeout_seconds) as client:
                 resp = await client.post(f'{NAIVE_ORCHESTRATOR_URL}/book', json=payload)
                 resp.raise_for_status()
                 result_data = resp.json()
@@ -101,6 +107,12 @@ class NaiveSagaStrategy(SagaOrchestratorStrategy):
                 temporal_ui_url=None,
             )
         except Exception as exc:
+            audit_report = None
+            try:
+                audit_report = await audit_booking_state(booking_id)
+            except Exception:
+                pass
+
             return BookingResponse(
                 booking_id=booking_id,
                 orchestrator='naive',
@@ -108,6 +120,7 @@ class NaiveSagaStrategy(SagaOrchestratorStrategy):
                 status='FAILED',
                 total_amount=payload['total_amount'],
                 error_message=f'Naive execution error: {exc}. No complete result is available; reconciliation may be required.',
+                audit=audit_report,
             )
 
 

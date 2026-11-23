@@ -9,7 +9,7 @@
 
 ## 1. System Pre-Flight Checklist
 
-Before launching the presentation, verify that all 7 microservices and the frontend dev server are healthy and accessible.
+Before launching the presentation, verify that all 7 application services, 2 monitoring containers, and the frontend dev server are healthy and accessible.
 
 ### 1.1 Running Container Topology
 
@@ -23,14 +23,18 @@ docker compose ps
 * `layover-payment` (`:8003`)
 * `layover-naive` (`:8004`)
 * `temporal` (`:7233` gRPC / `:8233` Web UI)
-* `layover-temporal-worker` (orchestrator worker)
+* `layover-worker` (`:8005` metrics)
 * `layover-gateway` (`:8000`)
+* `layover-prometheus` (`:9090`)
+* `layover-grafana` (`:3000`)
 
 ### 1.2 Access URLs
 
 * **React UI Dashboard:** [`http://localhost:5173`](http://localhost:5173)
 * **API Gateway Health:** [`http://localhost:8000/health`](http://localhost:8000/health)
 * **Temporal Web UI:** [`http://localhost:8233/namespaces/layover/workflows`](http://localhost:8233/namespaces/layover/workflows)
+* **Grafana Dashboard:** [`http://localhost:3000`](http://localhost:3000) *(anonymous admin access, pre-configured Layover dashboard)*
+* **Prometheus Metrics:** [`http://localhost:9090`](http://localhost:9090)
 
 ### 1.3 Managing Test Account Balance (`user_1`)
 
@@ -186,7 +190,7 @@ flowchart TD
 3. Click **Confirm & Pay**.
 4. During the 4-second window, execute `SIGKILL` on the Temporal Worker container:
    ```bash
-   docker kill layover-temporal-worker
+   docker kill layover-worker
    ```
 5. The worker process is dead, but notice what happened to the state:
    * Open the **Temporal Web UI** at [`http://localhost:8233`](http://localhost:8233).

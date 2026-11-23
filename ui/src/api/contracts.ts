@@ -35,6 +35,25 @@ export interface BookingResponse {
   compensations_executed: string[];
   error_message?: string | null;
   temporal_ui_url?: string | null;
+  audit?: BookingAuditReport | null;
+}
+
+export interface ServiceAuditRecord {
+  service_name: string;
+  database_file: string;
+  status: string;
+  details?: Record<string, unknown> | null;
+  is_stranded: boolean;
+  message?: string | null;
+}
+
+export interface BookingAuditReport {
+  booking_id: string;
+  has_stranded_records: boolean;
+  flight: ServiceAuditRecord;
+  hotel: ServiceAuditRecord;
+  payment: ServiceAuditRecord;
+  summary: string;
 }
 
 export interface ServiceHealth {
@@ -80,6 +99,29 @@ export function isScenario(value: unknown): value is Scenario {
   );
 }
 
+export function isServiceAuditRecord(value: unknown): value is ServiceAuditRecord {
+  return (
+    isRecord(value) &&
+    typeof value.service_name === 'string' &&
+    typeof value.database_file === 'string' &&
+    typeof value.status === 'string' &&
+    typeof value.is_stranded === 'boolean' &&
+    isOptionalString(value.message)
+  );
+}
+
+export function isBookingAuditReport(value: unknown): value is BookingAuditReport {
+  return (
+    isRecord(value) &&
+    typeof value.booking_id === 'string' &&
+    typeof value.has_stranded_records === 'boolean' &&
+    typeof value.summary === 'string' &&
+    isServiceAuditRecord(value.flight) &&
+    isServiceAuditRecord(value.hotel) &&
+    isServiceAuditRecord(value.payment)
+  );
+}
+
 export function isBookingResponse(value: unknown): value is BookingResponse {
   return (
     isRecord(value) &&
@@ -90,7 +132,8 @@ export function isBookingResponse(value: unknown): value is BookingResponse {
     isStringArray(value.steps_completed) &&
     isStringArray(value.compensations_executed) &&
     isOptionalString(value.error_message) &&
-    isOptionalString(value.temporal_ui_url)
+    isOptionalString(value.temporal_ui_url) &&
+    (value.audit == null || isBookingAuditReport(value.audit))
   );
 }
 

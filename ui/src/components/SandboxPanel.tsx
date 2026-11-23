@@ -40,7 +40,6 @@ export function SandboxPanel({
   isDisabled: boolean;
 }) {
   const [isHealthOpen, setHealthOpen] = useState(false);
-  const selected = scenarios.find((scenario) => scenario.key === selectedKey);
   const healthyCount =
     health.data?.services.filter((service) => service.status === 'UP').length || 0;
   const healthLabel =
@@ -211,16 +210,6 @@ export function SandboxPanel({
             ))}
           </div>
         </fieldset>
-
-        <p className="sandbox-note">
-          {selected?.description || 'Choose a gateway scenario to run a booking experiment.'}
-        </p>
-        <p className="sandbox-note text-[10px]">
-          {selectedOrchestrator === 'naive'
-            ? 'Vanilla: single HTTP attempts and volatile rollback state. Process crash destroys compensation stack.'
-            : 'Temporal: durable workflow history and activity retries. Recovers automatically upon worker restart.'}{' '}
-          Simulate container crashes via docker kill during Chaos pause.
-        </p>
       </div>
     </aside>
   );

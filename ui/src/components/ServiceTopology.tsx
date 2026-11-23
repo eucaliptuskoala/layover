@@ -122,8 +122,7 @@ export function ServiceTopology({
         {isPending
           ? 'Dispatching multi-service Saga transaction across independent microservices.'
           : playback && !playback.isComplete
-            ? 'Stepping through distributed saga state machine and compensations...'
-            : 'States are derived from actions reported by the orchestrator and verified in SQLite.'}
+        }
       </p>
     </section>
   );

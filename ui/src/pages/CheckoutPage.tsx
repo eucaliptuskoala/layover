@@ -132,10 +132,6 @@ export function CheckoutPage({
               </button>
             </div>
           )}
-          <p className="checkout-legal">
-            Academic sandbox · itinerary and card details are illustrative. Service health, booking
-            outcomes and reported actions are real gateway data.
-          </p>
         </div>
       </main>
 

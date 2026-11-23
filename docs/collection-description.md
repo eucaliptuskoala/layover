@@ -49,12 +49,13 @@ Personal experiments should have a clear relation to the multiple learning outco
 
 #### Software Quality (LO2) — HBO-i: Quality Management (Level 3–4)
 
-* Designed and executed a 120-test automated verification pyramid—combining mock-free SQLite CAS contract tests, Temporal SDK Replayer determinism verification, and an HTTP chaos barrier proving a 0% vs 100% crash resilience disparity under `SIGKILL`—grounded directly in the formal consistency rate formula established in Assessment 1 @[Contract & Integration Testing: Multi-Tier Quality Harness & Chaos Testing](evidences/lo2/contract-and-integration-testing/lo2-contract-and-integration-testing.md)
+* Designed and executed a 134-test automated verification pyramid—combining mock-free SQLite CAS contract tests, Temporal SDK Replayer determinism verification, and an HTTP chaos barrier proving a 0% vs 100% crash resilience disparity under `SIGKILL`—grounded directly in the formal consistency rate formula established in Assessment 1 @[Contract & Integration Testing: Multi-Tier Quality Harness & Chaos Testing](evidences/lo2/contract-and-integration-testing/lo2-contract-and-integration-testing.md)
 
 #### Software Maintenance (LO3) — HBO-i: Managing & Maintaining (Level 3)
 
 * Containerized the 7-service topology using multi-stage Alpine/Slim builds, native Python `urllib` healthcheck probes, and isolated named Docker volumes, enforcing strict physical Database-per-Service boundaries to prevent host-OS file-locking conflicts and cross-service data contamination @[Docker Containerization & Multi-Service Topology: 7-Container Ecosystem](evidences/lo3/docker-containerization/lo3-docker-containerization.md)
-* Constructed a dual-job GitHub Actions CI pipeline executing 6 parallel backend matrix runners (75 pytest tests + Docker image builds) and a Node 22 frontend verification runner (ESLint, 45 Vitest tests, Vite bundle typechecks) to eliminate contract regressions before merging @[Continuous Integration Pipeline](evidences/lo3/continuous-integration/lo3-continuous-integration-pipeline.md)
+* Constructed a dual-job GitHub Actions CI pipeline executing 6 parallel backend matrix runners (88 pytest tests + Docker image builds) and a Node 22 frontend verification runner (ESLint, 46 Vitest tests, Vite bundle typechecks), delivering 134 continuous automated tests to eliminate contract regressions before merging @[Continuous Integration Pipeline](evidences/lo3/continuous-integration/lo3-continuous-integration-pipeline.md)
+* Implemented an automated Prometheus and Grafana distributed observability stack with zero-dependency Python process telemetry, dedicated async worker socket exporters, and declarative dashboard provisioning as code, empirically proving the ~3.4x memory overhead between Vanilla Saga and Temporal orchestration @[Distributed Observability: Prometheus & Grafana Metric Telemetry](evidences/lo3/prometheus-grafana-monitoring/lo3-prometheus-grafana-monitoring.md)
 
 #### Professional Standard / Advising (LO4) — HBO-i: Advising (Level 3–4)
 

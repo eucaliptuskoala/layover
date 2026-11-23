@@ -135,11 +135,11 @@ This predictable window allows firing real infrastructure commands (`docker kill
     `500 Internal Server Error: RemoteProtocolError('Server disconnected without sending a response.')`
 * **Database State Audit:**
   ```bash
-  sqlite3 data/flight.db "SELECT booking_id, status FROM reservations WHERE booking_id = 'bk-8e80d7a9';"
+  sqlite3 data/flight.db "SELECT booking_id, status FROM flight_bookings WHERE booking_id = 'bk-8e80d7a9';"
   ```
   * Output: **`bk-8e80d7a9|RESERVED`**
   ```bash
-  sqlite3 data/hotel.db "SELECT * FROM bookings WHERE booking_id = 'bk-8e80d7a9';"
+  sqlite3 data/hotel.db "SELECT * FROM hotel_bookings WHERE booking_id = 'bk-8e80d7a9';"
   ```
   * Output: *(Empty)*
 * **Recovery Test:**

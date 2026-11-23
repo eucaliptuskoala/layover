@@ -49,6 +49,28 @@ class BookingRequest(BaseModel):
     )
 
 
+class ServiceAuditRecord(BaseModel):
+    """Status record of a single microservice database during reconciliation audit."""
+
+    service_name: str
+    database_file: str
+    status: str
+    details: Optional[dict] = None
+    is_stranded: bool = False
+    message: Optional[str] = None
+
+
+class BookingAuditReport(BaseModel):
+    """Aggregated distributed state audit across Flight, Hotel, and Payment databases."""
+
+    booking_id: str
+    has_stranded_records: bool
+    flight: ServiceAuditRecord
+    hotel: ServiceAuditRecord
+    payment: ServiceAuditRecord
+    summary: str
+
+
 class BookingResponse(BaseModel):
     """Unified booking dispatch response."""
 
@@ -61,6 +83,7 @@ class BookingResponse(BaseModel):
     compensations_executed: List[str] = Field(default_factory=list)
     error_message: Optional[str] = None
     temporal_ui_url: Optional[str] = None
+    audit: Optional[BookingAuditReport] = None
 
 
 class ServiceHealth(BaseModel):

@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
-from fastapi import FastAPI, status
+from fastapi import FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 
 # Ensure gateway directory is on sys.path for direct module imports
@@ -17,18 +17,24 @@ if str(GATEWAY_DIR) not in sys.path:
     sys.path.insert(0, str(GATEWAY_DIR))
 
 try:
+    from .audit import audit_booking_state
     from .dispatcher import dispatch_booking
     from .health import check_all_services
+    from .metrics import generate_prometheus_metrics
     from .models import (
+        BookingAuditReport,
         BookingRequest,
         BookingResponse,
         SystemHealthReport,
     )
     from .scenarios import DEFAULT_SCENARIOS
 except ImportError:
+    from audit import audit_booking_state
     from dispatcher import dispatch_booking
     from health import check_all_services
+    from metrics import generate_prometheus_metrics
     from models import (
+        BookingAuditReport,
         BookingRequest,
         BookingResponse,
         SystemHealthReport,
@@ -75,6 +81,17 @@ async def get_index() -> Dict[str, str]:
 # -----------------------------------------------------------------------------
 # Health Telemetry Endpoints
 # -----------------------------------------------------------------------------
+@app.get(
+    '/metrics',
+    summary='Prometheus Metrics Telemetry',
+    tags=['Telemetry'],
+)
+async def get_metrics() -> Response:
+    """Exposes Prometheus text metrics for process memory, CPU, and uptime."""
+    content = generate_prometheus_metrics('layover-gateway')
+    return Response(content=content, media_type='text/plain; version=0.0.4')
+
+
 @app.get(
     '/health',
     response_model=SystemHealthReport,
@@ -142,6 +159,24 @@ async def create_booking(request: BookingRequest) -> BookingResponse:
     Executes forward activities or coordinates LIFO compensation rollbacks.
     """
     return await dispatch_booking(request)
+
+
+# -----------------------------------------------------------------------------
+# Booking Audit & Reconciliation Endpoint
+# -----------------------------------------------------------------------------
+@app.get(
+    '/api/bookings/{booking_id}/audit',
+    response_model=BookingAuditReport,
+    status_code=status.HTTP_200_OK,
+    summary='Audit Distributed Database State for Booking',
+    tags=['Bookings'],
+)
+async def get_booking_audit(booking_id: str) -> BookingAuditReport:
+    """
+    Audits the current state across all independent databases (Flight, Hotel, Payment)
+    via their HTTP APIs, detecting stranded holds or uncompensated state.
+    """
+    return await audit_booking_state(booking_id)
 
 
 # -----------------------------------------------------------------------------

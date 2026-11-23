@@ -10,6 +10,7 @@ from temporalio.contrib.pydantic import pydantic_data_converter
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
+from temporalio.exceptions import ApplicationError
 from activities import (
     cancel_flight_activity,
     cancel_hotel_activity,
@@ -305,3 +306,91 @@ async def test_booking_saga_payment_failure_rollback(sample_booking_input: Booki
                 assert hotel_cancel_route.called
                 assert flight_cancel_route.called
                 assert 'Payment charge rejected' in result.error_message
+
+
+@pytest.mark.asyncio
+async def test_activity_error_classification_4xx_vs_5xx():
+    """
+    Verifies that HTTP 5xx responses are marked retryable (non_retryable=False),
+    while HTTP 4xx responses are marked non-retryable (non_retryable=True).
+    """
+    from models import FlightReservationRequest
+
+    req = FlightReservationRequest(
+        booking_id='bk-retry-test',
+        customer_id='user_1',
+        flight_number='LH-101',
+        price=350.0,
+    )
+
+    with respx.mock:
+        # 500 error -> retryable
+        respx.post('http://localhost:8001/reserve').mock(
+            return_value=Response(500, text='Internal Server Error')
+        )
+        with pytest.raises(ApplicationError) as exc_info_500:
+            await reserve_flight_activity(req)
+        assert exc_info_500.value.non_retryable is False
+
+    with respx.mock:
+        # 422 error -> non-retryable (business rejection)
+        respx.post('http://localhost:8001/reserve').mock(
+            return_value=Response(422, text='Flight fully booked')
+        )
+        with pytest.raises(ApplicationError) as exc_info_422:
+            await reserve_flight_activity(req)
+        assert exc_info_422.value.non_retryable is True
+
+
+@pytest.mark.asyncio
+async def test_booking_saga_exhausted_compensation_failure_reports_failed(
+    sample_booking_input: BookingWorkflowInput,
+):
+    """
+    Verifies that if a compensating activity fails after exhausting all retries,
+    the workflow returns status='FAILED' (instead of silently reporting COMPENSATED).
+    """
+    with respx.mock(assert_all_called=False) as respx_mock:
+        respx_mock.post('http://localhost:8001/reserve').mock(
+            return_value=Response(
+                201,
+                json={
+                    'id': 1,
+                    'booking_id': sample_booking_input.booking_id,
+                    'customer_id': sample_booking_input.customer_id,
+                    'flight_number': sample_booking_input.flight_number,
+                    'price': sample_booking_input.flight_price,
+                    'status': 'RESERVED',
+                },
+            )
+        )
+        # Hotel fails with 409
+        respx_mock.post('http://localhost:8002/reserve').mock(
+            return_value=Response(409, text='Hotel room already booked')
+        )
+        # Flight cancellation fails with non-retryable 400 error
+        respx_mock.post('http://localhost:8001/cancel').mock(
+            return_value=Response(400, text='Flight booking not found or already cancelled')
+        )
+
+        async with await WorkflowEnvironment.start_time_skipping(
+            data_converter=pydantic_data_converter
+        ) as env:
+            async with Worker(
+                env.client,
+                task_queue='test-booking-queue',
+                workflows=[BookingWorkflow],
+                activities=ALL_ACTIVITIES,
+            ):
+                result = await env.client.execute_workflow(
+                    BookingWorkflow.run,
+                    sample_booking_input,
+                    id='wf-test-comp-fail',
+                    task_queue='test-booking-queue',
+                )
+
+                assert result.status == 'FAILED'
+                assert result.steps_completed == ['reserve_flight']
+                assert result.compensations_executed == []
+                assert 'failed compensation(s): cancel_flight' in result.error_message
+

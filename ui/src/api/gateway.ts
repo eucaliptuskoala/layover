@@ -1,10 +1,12 @@
 import axios from 'axios';
 
 import {
+  isBookingAuditReport,
   isBookingResponse,
   isHealthReport,
   isRecord,
   isScenario,
+  type BookingAuditReport,
   type BookingRequest,
   type BookingResponse,
   type HealthReport,
@@ -41,6 +43,18 @@ export async function createBooking(request: BookingRequest): Promise<BookingRes
     Number.isFinite(configuredTimeout) && configuredTimeout >= 1000 ? configuredTimeout : 300_000;
   const { data } = await apiClient.post<unknown>('/bookings', request, { timeout });
   if (!isBookingResponse(data)) unexpectedResponse();
+  return data;
+}
+
+export async function getBookingAudit(
+  bookingId: string,
+  signal?: AbortSignal,
+): Promise<BookingAuditReport> {
+  const { data } = await apiClient.get<unknown>(
+    `/bookings/${encodeURIComponent(bookingId)}/audit`,
+    { signal },
+  );
+  if (!isBookingAuditReport(data)) unexpectedResponse();
   return data;
 }
 

@@ -19,12 +19,38 @@ from activities import (
     reserve_flight_activity,
     reserve_hotel_activity,
 )
+from metrics import generate_prometheus_metrics
 from workflows import BookingWorkflow
 
 
 TEMPORAL_HOST = os.getenv('TEMPORAL_HOST', 'localhost:7233')
 TEMPORAL_NAMESPACE = os.getenv('TEMPORAL_NAMESPACE', 'layover')
 TEMPORAL_TASK_QUEUE = os.getenv('TEMPORAL_TASK_QUEUE', 'booking-task-queue')
+METRICS_PORT = int(os.getenv('METRICS_PORT', '8005'))
+
+
+async def handle_metrics_request(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+    """Lightweight HTTP handler serving Prometheus text metrics on port 8005."""
+    try:
+        await reader.read(1024)
+        body = generate_prometheus_metrics('layover-worker')
+        response = (
+            f'HTTP/1.1 200 OK\r\n'
+            f'Content-Type: text/plain; version=0.0.4\r\n'
+            f'Content-Length: {len(body)}\r\n'
+            f'Connection: close\r\n\r\n'
+            f'{body}'
+        )
+        writer.write(response.encode('utf-8'))
+        await writer.drain()
+    except Exception:
+        pass
+    finally:
+        try:
+            writer.close()
+            await writer.wait_closed()
+        except Exception:
+            pass
 
 
 async def run_worker() -> None:
@@ -35,6 +61,9 @@ async def run_worker() -> None:
         data_converter=pydantic_data_converter,
     )
     print('[Temporal Worker] Connected successfully.')
+
+    metrics_server = await asyncio.start_server(handle_metrics_request, '0.0.0.0', METRICS_PORT)
+    print(f'[Temporal Worker] Metrics telemetry server listening on port {METRICS_PORT}.')
 
     worker = Worker(
         client,
